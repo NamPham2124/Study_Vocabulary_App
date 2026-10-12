@@ -13,8 +13,11 @@ from fastapi import (
     Request,
     status,
 )
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
+from vocabmaster.api.ui import HTML_CONTENT
 
 from vocabmaster.auth.security import hash_password, verify_password
 from vocabmaster.auth.tokens import (
@@ -125,6 +128,11 @@ def create_app(db_path: Optional[str] = None) -> FastAPI:
     @app.get("/health")
     def health():
         return {"status": "ok", "app": "VocabMaster", "version": "1.0.0"}
+
+    @app.get("/", response_class=HTMLResponse)
+    @app.get("/app", response_class=HTMLResponse)
+    def index():
+        return HTML_CONTENT
 
     # -----------------------------------------------------------------------
     # Authentication Endpoints
