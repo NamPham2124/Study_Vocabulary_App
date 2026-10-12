@@ -75,14 +75,14 @@ def get_user_by_id(conn: sqlite3.Connection, user_id: str) -> Optional[Dict[str,
 
 
 def get_user_by_email(conn: sqlite3.Connection, email: str) -> Optional[Dict[str, Any]]:
-    sql = "SELECT * FROM users WHERE email = ?"
-    row = conn.execute(sql, (email.lower(),)).fetchone()
+    sql = "SELECT * FROM users WHERE LOWER(email) = LOWER(?)"
+    row = conn.execute(sql, (email.strip(),)).fetchone()
     return dict(row) if row else None
 
 
 def get_user_by_username(conn: sqlite3.Connection, username: str) -> Optional[Dict[str, Any]]:
-    sql = "SELECT * FROM users WHERE username = ?"
-    row = conn.execute(sql, (username,)).fetchone()
+    sql = "SELECT * FROM users WHERE LOWER(username) = LOWER(?)"
+    row = conn.execute(sql, (username.strip(),)).fetchone()
     return dict(row) if row else None
 
 

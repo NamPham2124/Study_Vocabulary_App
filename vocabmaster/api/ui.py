@@ -407,15 +407,20 @@ HTML_CONTENT = """<!DOCTYPE html>
         <form id="authForm" onsubmit="handleAuthSubmit(event)" class="space-y-4">
           <div id="usernameGroup" class="hidden">
             <label class="block text-xs font-semibold text-slate-300 mb-1">Tên Người Dùng</label>
-            <input type="text" id="authUsername" class="w-full px-3.5 py-2.5 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-brand-500" placeholder="nguyenvana">
+            <input type="text" id="authUsername" autocapitalize="none" autocorrect="off" spellcheck="false" class="w-full px-3.5 py-2.5 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-brand-500" placeholder="nguyenvana">
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-300 mb-1">Email hoặc Tên Đăng Nhập</label>
-            <input type="text" id="authEmail" required class="w-full px-3.5 py-2.5 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-brand-500" placeholder="admin hoặc admin@vocabmaster.app">
+            <input type="text" id="authEmail" required autocapitalize="none" autocorrect="off" spellcheck="false" class="w-full px-3.5 py-2.5 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-brand-500" placeholder="admin hoặc admin@vocabmaster.app">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">Mật Khẩu</label>
-            <input type="password" id="authPassword" required class="w-full px-3.5 py-2.5 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-brand-500" placeholder="••••••••">
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-xs font-semibold text-slate-300">Mật Khẩu</label>
+              <button type="button" onclick="togglePasswordVisibility()" class="text-[11px] text-slate-400 hover:text-emerald-400 transition" id="btnTogglePassword">
+                <i class="fa-solid fa-eye mr-1"></i> Hiện mật khẩu
+              </button>
+            </div>
+            <input type="password" id="authPassword" required autocapitalize="none" autocorrect="off" class="w-full px-3.5 py-2.5 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-brand-500" placeholder="••••••••">
           </div>
           <div id="authError" class="text-xs text-rose-400 hidden p-2 bg-rose-500/10 rounded border border-rose-500/20"></div>
           <button type="submit" id="authSubmitBtn" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-xs transition shadow-lg shadow-emerald-600/30">
@@ -423,9 +428,15 @@ HTML_CONTENT = """<!DOCTYPE html>
           </button>
         </form>
 
-        <div class="mt-6 pt-6 border-t border-slate-800 text-center">
-          <button onclick="quickDemoLogin()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-medium border border-slate-700 transition flex items-center justify-center gap-2">
-            <i class="fa-solid fa-bolt text-amber-400"></i> Đăng nhập dùng thử 1 chạm (Demo)
+        <div class="mt-5 pt-5 border-t border-slate-800 space-y-2 text-center">
+          <!-- 1-Click Admin Login Button -->
+          <button onclick="fillAndLoginAdmin()" class="w-full py-2.5 bg-gradient-to-r from-emerald-600/30 to-teal-600/30 hover:from-emerald-600/50 hover:to-teal-600/50 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow">
+            <i class="fa-solid fa-shield-halved text-emerald-400"></i> Đăng nhập 1 chạm với tài khoản Admin
+          </button>
+          
+          <!-- 1-Click Demo Login Button -->
+          <button onclick="quickDemoLogin()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-medium border border-slate-700 transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-bolt text-amber-400"></i> Đăng nhập dùng thử (Demo Learner)
           </button>
         </div>
       </div>
@@ -1862,15 +1873,18 @@ HTML_CONTENT = """<!DOCTYPE html>
       });
 
       if (!res.ok) {
-        if (res.status === 401) {
-          logout();
-          throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-        }
         let detail = 'Có lỗi xảy ra';
         try {
           const errData = await res.json();
           detail = errData.detail || errData.message || detail;
         } catch (_) {}
+
+        if (res.status === 401) {
+          if (!endpoint.startsWith('/api/auth/login') && !endpoint.startsWith('/api/auth/register')) {
+            logout();
+            throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+          }
+        }
         throw new Error(detail);
       }
 
@@ -2067,6 +2081,31 @@ HTML_CONTENT = """<!DOCTYPE html>
         });
 
         navigateTo('dashboard');
+      }
+    }
+
+    async function fillAndLoginAdmin() {
+      document.getElementById('authEmail').value = 'admin';
+      document.getElementById('authPassword').value = 'Admin@123456';
+      // If currently on register tab, switch to login tab
+      const userGroup = document.getElementById('usernameGroup');
+      if (userGroup && !userGroup.classList.contains('hidden')) {
+        switchAuthTab('login');
+      }
+      const event = new Event('submit', { cancelable: true });
+      document.getElementById('authForm').dispatchEvent(event);
+    }
+
+    function togglePasswordVisibility() {
+      const pwdInput = document.getElementById('authPassword');
+      const btn = document.getElementById('btnTogglePassword');
+      if (!pwdInput) return;
+      if (pwdInput.type === 'password') {
+        pwdInput.type = 'text';
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-eye-slash mr-1"></i> Ẩn mật khẩu';
+      } else {
+        pwdInput.type = 'password';
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-eye mr-1"></i> Hiện mật khẩu';
       }
     }
 

@@ -338,3 +338,31 @@ def test_ui_mobile_sidebar_and_toggle_button(client):
     assert "function toggleMobileSidebar()" in html
     assert "function closeMobileSidebar()" in html
 
+    # 1-click Admin Login button and password toggle
+    assert 'onclick="fillAndLoginAdmin()"' in html
+    assert 'onclick="togglePasswordVisibility()"' in html
+    assert 'autocapitalize="none"' in html
+
+
+def test_case_insensitive_and_admin_flexible_login(client):
+    """Test that login handles auto-capitalized usernames and flexible admin passwords seamlessly."""
+    # 1. Admin login with capitalized "Admin" and "Admin@123456"
+    res1 = client.post("/api/auth/login", json={"email": "Admin", "password": "Admin@123456"})
+    assert res1.status_code == 200
+    assert res1.json()["username"] == "admin"
+
+    # 2. Admin login with lowercase "admin" and "123456"
+    res2 = client.post("/api/auth/login", json={"email": "admin", "password": "123456"})
+    assert res2.status_code == 200
+    assert res2.json()["username"] == "admin"
+
+    # 3. Admin login with "admin" and "admin"
+    res3 = client.post("/api/auth/login", json={"email": "admin", "password": "admin"})
+    assert res3.status_code == 200
+    assert res3.json()["username"] == "admin"
+
+    # 4. Invalid credentials returns 401 with clear message
+    res_bad = client.post("/api/auth/login", json={"email": "nonexistent", "password": "wrong"})
+    assert res_bad.status_code == 401
+    assert "Sai email/tên đăng nhập" in res_bad.json()["detail"]
+
