@@ -183,8 +183,8 @@ HTML_CONTENT = """<!DOCTYPE html>
             <input type="text" id="authUsername" class="w-full px-3.5 py-2.5 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-brand-500" placeholder="nguyenvana">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">Địa Chỉ Email</label>
-            <input type="email" id="authEmail" required class="w-full px-3.5 py-2.5 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-brand-500" placeholder="user@example.com">
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Email hoặc Tên Đăng Nhập</label>
+            <input type="text" id="authEmail" required class="w-full px-3.5 py-2.5 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-brand-500" placeholder="admin hoặc admin@vocabmaster.app">
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-300 mb-1">Mật Khẩu</label>

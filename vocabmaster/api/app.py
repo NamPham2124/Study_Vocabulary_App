@@ -240,7 +240,10 @@ def create_app(db_path: Optional[str] = None) -> FastAPI:
     @app.post("/api/auth/login", response_model=TokenResponse)
     def login(req: UserLogin):
         with get_db(db_path) as conn:
-            user = repository.get_user_by_email(conn, req.email)
+            ident = req.email.strip()
+            user = repository.get_user_by_email(conn, ident.lower())
+            if not user:
+                user = repository.get_user_by_username(conn, ident)
             if not user or not verify_password(req.password, user["password_hash"], user["salt"]):
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
