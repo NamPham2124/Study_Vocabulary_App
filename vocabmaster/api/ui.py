@@ -2808,6 +2808,128 @@ HTML_CONTENT = """<!DOCTYPE html>
       }).join(' ');
     }
 
+    function evaluateVietnameseMeaningSimilarity(userText, targetText, threshold = 0.52) {
+      if (!userText || !targetText) return { is_similar: false, score: 0, percentage: 0, feedback: 'Chưa nhập nghĩa tiếng Việt' };
+      
+      const clean = (s) => (s || '').toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()?\"'\[\]\\<>+]/g, ' ').replace(/\s+/g, ' ').trim();
+      const userNorm = clean(userText);
+      const targetNorm = clean(targetText);
+
+      const particles = ['sự', 'tính', 'việc', 'cuộc', 'cái', 'con', 'người', 'nhà', 'nơi', 'chỗ', 'đồ', 'vật', 'được', 'bị', 'làm', 'khiến', 'tình trạng'];
+      const stripPart = (str) => {
+        let words = str.split(' ');
+        while (words.length > 0 && particles.includes(words[0])) {
+          words.shift();
+        }
+        return words.join(' ');
+      };
+
+      const userCore = stripPart(userNorm);
+
+      const senses = targetText.split(/[;,/|\n()]/).map(clean).filter(s => s.length > 1);
+      if (senses.length === 0) senses.push(targetNorm);
+
+      const synGroups = [
+        ['kiên trì', 'bền chí', 'kiên nhẫn', 'bền bỉ', 'nhẫn nại', 'chịu khó', 'kiên cường'],
+        ['phổ biến', 'thông thường', 'khắp nơi', 'rộng rãi', 'đại trà', 'quen thuộc', 'ở khắp mọi nơi', 'có mặt khắp nơi'],
+        ['quan trọng', 'thiết yếu', 'cốt yếu', 'chủ chốt', 'then chốt', 'trọng yếu'],
+        ['thành công', 'đạt được', 'thắng lợi', 'thành tựu', 'thành đạt'],
+        ['thất bại', 'hỏng', 'bại', 'đổ vỡ', 'thua cuộc'],
+        ['thông minh', 'sáng dạ', 'nhanh trí', 'lanh lợi', 'khôn ngoan', 'tài giỏi'],
+        ['khó khăn', 'gian nan', 'vất vả', 'trở ngại', 'thử thách'],
+        ['nhanh', 'mau', 'chóng', 'lẹ', 'tốc độ', 'nhanh chóng', 'mau chóng'],
+        ['chậm', 'từ từ', 'chậm chạp', 'chậm trễ', 'trì trệ'],
+        ['to lớn', 'khổng lồ', 'vĩ đại', 'rộng lớn', 'bao la'],
+        ['nhỏ bé', 'bé nhỏ', 'tí hon', 'ít ỏi'],
+        ['đẹp', 'xinh', 'xinh xắn', 'xinh đẹp', 'dễ nhìn', 'ưa nhìn'],
+        ['xấu', 'tệ', 'xấu xí', 'dở', 'kém', 'tồi tệ'],
+        ['bắt đầu', 'khởi đầu', 'mở đầu', 'tiến hành'],
+        ['kết thúc', 'hoàn thành', 'chấm dứt', 'xong'],
+        ['tìm kiếm', 'tìm', 'lùng', 'tra cứu'],
+        ['giúp đỡ', 'hỗ trợ', 'cứu trợ', 'giúp'],
+        ['bảo vệ', 'gìn giữ', 'phòng hộ', 'che chở'],
+        ['phát triển', 'mở rộng', 'tiến bộ', 'nâng cao', 'tăng trưởng'],
+        ['cải thiện', 'nâng cao', 'tiến bộ', 'sửa đổi', 'hoàn thiện'],
+        ['người đi bộ', 'khách bộ hành', 'người đi đường']
+      ];
+
+      const areSynonyms = (a, b) => {
+        const ca = stripPart(a);
+        const cb = stripPart(b);
+        return synGroups.some(g => {
+          const inA = g.some(w => ca === w || ca.includes(w) || w.includes(ca));
+          const inB = g.some(w => cb === w || cb.includes(w) || w.includes(cb));
+          return inA && inB;
+        });
+      };
+
+      const getVec = (str) => {
+        const vec = {};
+        const words = str.split(' ');
+        words.forEach(w => { vec['w:' + w] = (vec['w:' + w] || 0) + 1.5; });
+        for (let i = 0; i < words.length - 1; i++) {
+          const bg = 'bg:' + words[i] + '_' + words[i+1];
+          vec[bg] = (vec[bg] || 0) + 2.0;
+        }
+        const compact = str.replace(/\s+/g, '');
+        for (let i = 0; i < compact.length - 2; i++) {
+          const trigram = 'c:' + compact.slice(i, i + 3);
+          vec[trigram] = (vec[trigram] || 0) + 1.0;
+        }
+        return vec;
+      };
+
+      const cosSim = (v1, v2) => {
+        let dot = 0, n1 = 0, n2 = 0;
+        for (let k in v1) {
+          if (v2[k]) dot += v1[k] * v2[k];
+          n1 += v1[k] * v1[k];
+        }
+        for (let k in v2) n2 += v2[k] * v2[k];
+        return (n1 > 0 && n2 > 0) ? dot / (Math.sqrt(n1) * Math.sqrt(n2)) : 0;
+      };
+
+      const userVec = getVec(userNorm);
+      let bestScore = 0;
+
+      for (let sense of senses) {
+        const senseCore = stripPart(sense);
+        let score = 0;
+        if (userNorm === sense || userCore === senseCore) {
+          score = 1.0;
+        } else if (userCore && (userCore.includes(senseCore) || senseCore.includes(userCore))) {
+          score = Math.max(0.90, userCore.length / Math.max(senseCore.length, 1));
+        } else if (areSynonyms(userNorm, sense)) {
+          score = 0.92;
+        } else {
+          const sVec = getVec(sense);
+          const cos = cosSim(userVec, sVec);
+          const uTokens = new Set(userNorm.split(' '));
+          const sTokens = new Set(sense.split(' '));
+          let inter = 0;
+          uTokens.forEach(t => { if (sTokens.has(t)) inter++; });
+          const union = new Set([...uTokens, ...sTokens]).size;
+          const jac = union > 0 ? inter / union : 0;
+          score = (cos * 0.65) + (jac * 0.35);
+        }
+        if (score > bestScore) bestScore = score;
+      }
+
+      const isSimilar = bestScore >= threshold;
+      const pct = Math.round(bestScore * 100);
+      let feedback = '';
+      if (bestScore >= 0.90) feedback = `Chính xác hoàn toàn! (${pct}%)`;
+      else if (isSimilar) feedback = `Tương đồng ngữ nghĩa cao (${pct}% ➔ Đạt)`;
+      else feedback = `Chưa sát nghĩa (Độ tương đồng: ${pct}%)`;
+
+      return {
+        is_similar: isSimilar,
+        score: bestScore,
+        percentage: pct,
+        feedback: feedback
+      };
+    }
+
     function shuffleAndRestartQuiz() {
       if (!multiExCards || multiExCards.length === 0) return;
       multiExCards.sort(() => Math.random() - 0.5);
@@ -3143,14 +3265,18 @@ HTML_CONTENT = """<!DOCTYPE html>
       let speechCorrect = false;
       let meaningCorrect = false;
 
+      const meaningEval = (currentActiveExerciseMode === 'mode1' || currentActiveExerciseMode === 'mode2')
+        ? evaluateVietnameseMeaningSimilarity(userMeaning, card.definition, 0.52)
+        : { is_similar: true, score: 1.0, percentage: 100, feedback: '' };
+
       if (currentActiveExerciseMode === 'mode1') {
         wordCorrect = (userWordClean === targetWordClean);
-        meaningCorrect = (userMeaning.length > 0);
+        meaningCorrect = meaningEval.is_similar;
         speechCorrect = true;
       } else if (currentActiveExerciseMode === 'mode2') {
         wordCorrect = true;
         speechCorrect = multiExSpokenVerified;
-        meaningCorrect = (userMeaning.length > 0);
+        meaningCorrect = meaningEval.is_similar;
       } else if (currentActiveExerciseMode === 'mode3') {
         wordCorrect = (userWordClean === targetWordClean);
         speechCorrect = multiExSpokenVerified;
@@ -3241,10 +3367,24 @@ HTML_CONTENT = """<!DOCTYPE html>
       document.getElementById('feedbackMeaningText').textContent = card.definition;
       const meaningComp = document.getElementById('feedbackMeaningUserComparison');
       if (currentActiveExerciseMode === 'mode1' || currentActiveExerciseMode === 'mode2') {
-        if (userMeaning) {
-          meaningComp.innerHTML = `<span class="text-slate-300">Bạn đã ghi: "<strong class="text-white">${userMeaning}</strong>"</span>`;
+        if (!userMeaning) {
+          meaningComp.innerHTML = `<span class="text-rose-400 font-semibold"><i class="fa-solid fa-xmark"></i> Bạn chưa nhập nghĩa tiếng Việt</span> <span class="text-slate-400">➔ Nghĩa chuẩn: <strong class="text-white">${card.definition}</strong></span>`;
+        } else if (meaningEval.is_similar) {
+          const badgeColor = meaningEval.percentage >= 90 ? 'text-emerald-400' : 'text-teal-300';
+          meaningComp.innerHTML = `
+            <span class="${badgeColor} font-semibold">
+              <i class="fa-solid fa-circle-nodes"></i> ${meaningEval.feedback}
+            </span>
+            <span class="text-slate-300"> — Bạn ghi: "<strong class="text-white">${userMeaning}</strong>"</span>
+            <span class="text-slate-400"> (Nghĩa mẫu: <strong class="text-slate-200">${card.definition}</strong>)</span>
+          `;
         } else {
-          meaningComp.innerHTML = `<span class="text-rose-400">Bạn chưa nhập nghĩa tiếng Việt</span>`;
+          meaningComp.innerHTML = `
+            <span class="text-rose-400 font-semibold">
+              <i class="fa-solid fa-circle-xmark"></i> ${meaningEval.feedback}
+            </span>
+            <span class="text-slate-400"> — Bạn ghi: "<span class="text-rose-300">${userMeaning}</span>" ➔ Nghĩa chuẩn: <strong class="text-white">${card.definition}</strong></span>
+          `;
         }
       } else {
         meaningComp.innerHTML = `<span class="text-slate-400">Đề bài gợi ý theo nghĩa tiếng Việt này</span>`;

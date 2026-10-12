@@ -126,6 +126,12 @@ class PracticeSubmitRequest(BaseModel):
     session_id: Optional[str] = None
 
 
+class MeaningEvaluateRequest(BaseModel):
+    user_text: str
+    target_definition: str
+    threshold: Optional[float] = 0.52
+
+
 def get_current_user(
     request: Request,
     authorization: Optional[str] = Header(None),
@@ -1047,6 +1053,16 @@ def create_app(db_path: Optional[str] = None) -> FastAPI:
     # Practice Submissions (Speaking & Writing)
     # -----------------------------------------------------------------------
 
+    @app.post("/api/practice/evaluate-meaning")
+    def evaluate_meaning_endpoint(
+        req: MeaningEvaluateRequest,
+        user: Dict[str, Any] = Depends(get_current_user),
+    ):
+        from vocabmaster.srs.semantic import calculate_vietnamese_semantic_similarity
+        return calculate_vietnamese_semantic_similarity(
+            req.user_text, req.target_definition, threshold=req.threshold or 0.52
+        )
+
     @app.post("/api/practice/submit")
     def submit_practice(
         req: PracticeSubmitRequest,
@@ -1070,7 +1086,18 @@ def create_app(db_path: Optional[str] = None) -> FastAPI:
                 srs_card = repository.get_srs_card_by_vocab_id(conn, req.vocab_id)
                 if srs_card and srs_card.get("user_id") == user["id"]:
                     rating = req.self_assessment_score
-                    is_corr = req.is_correct if req.is_correct is not None else (rating >= 3)
+                    is_corr = req.is_correct
+                    if is_corr is None:
+                        # Auto-evaluate semantic meaning if Vietnamese definition is tested
+                        if "mode1" in req.practice_type or "mode2" in req.practice_type:
+                            from vocabmaster.srs.semantic import calculate_vietnamese_semantic_similarity
+                            v_item = repository.get_vocab_item_by_id(conn, req.vocab_id, user["id"])
+                            if v_item and v_item.get("definition"):
+                                sem = calculate_vietnamese_semantic_similarity(req.user_text, v_item["definition"])
+                                is_corr = sem["is_similar"]
+                        if is_corr is None:
+                            is_corr = (rating >= 3)
+
                     updated_srs = review_card(conn, srs_card["id"], user["id"], rating)
 
                     # Ensure valid session exists for foreign key constraint

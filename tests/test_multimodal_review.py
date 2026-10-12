@@ -325,3 +325,50 @@ def test_dynamic_masking_quiz_and_lapse_tracking(client, auth_headers):
     assert "relearnBox5" in html
 
 
+def test_vietnamese_semantic_similarity_evaluation(client, auth_headers):
+    # 1. Test exact/core match
+    res1 = client.post(
+        "/api/practice/evaluate-meaning",
+        headers=auth_headers,
+        json={"user_text": "kiên trì", "target_definition": "sự kiên trì, bền chí"}
+    )
+    assert res1.status_code == 200
+    d1 = res1.json()
+    assert d1["is_similar"] is True
+    assert d1["percentage"] >= 90
+
+    # 2. Test synonym semantic match (kiên nhẫn for kiên trì)
+    res2 = client.post(
+        "/api/practice/evaluate-meaning",
+        headers=auth_headers,
+        json={"user_text": "kiên nhẫn", "target_definition": "sự kiên trì, bền chí"}
+    )
+    assert res2.status_code == 200
+    d2 = res2.json()
+    assert d2["is_similar"] is True
+    assert d2["percentage"] >= 80
+
+    # 3. Test phrase variation (có mặt ở khắp nơi for phổ biến, có mặt khắp nơi)
+    res3 = client.post(
+        "/api/practice/evaluate-meaning",
+        headers=auth_headers,
+        json={"user_text": "có mặt ở khắp nơi", "target_definition": "phổ biến, có mặt khắp nơi"}
+    )
+    assert res3.status_code == 200
+    d3 = res3.json()
+    assert d3["is_similar"] is True
+    assert d3["percentage"] >= 75
+
+    # 4. Test completely unrelated meaning
+    res4 = client.post(
+        "/api/practice/evaluate-meaning",
+        headers=auth_headers,
+        json={"user_text": "máy bay", "target_definition": "sự kiên trì, bền chí"}
+    )
+    assert res4.status_code == 200
+    d4 = res4.json()
+    assert d4["is_similar"] is False
+    assert d4["percentage"] < 40
+
+
+
