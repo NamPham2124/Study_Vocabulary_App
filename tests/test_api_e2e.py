@@ -366,3 +366,33 @@ def test_case_insensitive_and_admin_flexible_login(client):
     assert res_bad.status_code == 401
     assert "Sai email/tên đăng nhập" in res_bad.json()["detail"]
 
+
+def test_ui_html_javascript_syntax_validity(client):
+    """Ensure all JavaScript code inside HTML_CONTENT compiles without syntax errors."""
+    import re
+    import shutil
+    import subprocess
+    import tempfile
+
+    res = client.get("/")
+    assert res.status_code == 200
+    html = res.text
+
+    scripts = re.findall(r"<script>(.*?)</script>", html, re.DOTALL)
+    assert len(scripts) >= 1
+
+    node_bin = shutil.which("node")
+    if node_bin:
+        for idx, script in enumerate(scripts):
+            with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as f:
+                f.write(script)
+                f_path = f.name
+            try:
+                result = subprocess.run([node_bin, "--check", f_path], capture_output=True, text=True)
+                assert result.returncode == 0, f"Script tag {idx} has JS syntax error:\n{result.stderr}"
+            finally:
+                import os
+                if os.path.exists(f_path):
+                    os.unlink(f_path)
+
+

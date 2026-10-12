@@ -2950,7 +2950,16 @@ HTML_CONTENT = """<!DOCTYPE html>
     function evaluateVietnameseMeaningSimilarity(userText, targetText, threshold = 0.52) {
       if (!userText || !targetText) return { is_similar: false, score: 0, percentage: 0, feedback: 'Chưa nhập nghĩa tiếng Việt' };
       
-      const clean = (s) => (s || '').toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()?\"'\[\]\\<>+]/g, ' ').replace(/\s+/g, ' ').trim();
+      const clean = (s) => {
+        if (!s) return '';
+        const punct = '.,/#!$%^&*;:{}=-_~()?[]<>+' + String.fromCharCode(34) + String.fromCharCode(39);
+        let out = '';
+        for (let i = 0; i < s.length; i++) {
+          const ch = s[i].toLowerCase();
+          out += punct.includes(ch) ? ' ' : ch;
+        }
+        return out.split(' ').filter(Boolean).join(' ');
+      };
       const userNorm = clean(userText);
       const targetNorm = clean(targetText);
 
@@ -2965,7 +2974,12 @@ HTML_CONTENT = """<!DOCTYPE html>
 
       const userCore = stripPart(userNorm);
 
-      const senses = targetText.split(/[;,/|\n()]/).map(clean).filter(s => s.length > 1);
+      let normSplit = targetText || '';
+      const splitChars = [';', ',', '/', '|', '(', ')', String.fromCharCode(10), String.fromCharCode(13)];
+      for (let i = 0; i < splitChars.length; i++) {
+        normSplit = normSplit.split(splitChars[i]).join(';;;');
+      }
+      const senses = normSplit.split(';;;').map(clean).filter(s => s.length > 1);
       if (senses.length === 0) senses.push(targetNorm);
 
       const synGroups = [
@@ -3338,10 +3352,20 @@ HTML_CONTENT = """<!DOCTYPE html>
           const transcript = results[0] || '';
           multiExSpeechTranscript = transcript;
 
-          const cleanTarget = card.term.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "").trim();
+          const cleanPunct = (s) => {
+            if (!s) return '';
+            const punct = '.,/#!$%^&*;:{}=-_~()?[]<>+' + String.fromCharCode(34) + String.fromCharCode(39);
+            let out = '';
+            for (let i = 0; i < s.length; i++) {
+              const ch = s[i].toLowerCase();
+              if (!punct.includes(ch)) out += ch;
+            }
+            return out.trim();
+          };
+          const cleanTarget = cleanPunct(card.term);
 
           const isMatch = results.some(t => {
-            const c = t.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "").trim();
+            const c = cleanPunct(t);
             return c === cleanTarget || c.includes(cleanTarget) || cleanTarget.includes(c);
           });
 
@@ -3395,7 +3419,16 @@ HTML_CONTENT = """<!DOCTYPE html>
       const userWord = (document.getElementById('multiExWordInput')?.value || '').trim();
       const userMeaning = (document.getElementById('multiExMeaningInput')?.value || '').trim();
 
-      const cleanStr = (s) => (s || '').toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()?]/g, "").trim();
+      const cleanStr = (s) => {
+        if (!s) return '';
+        const punct = '.,/#!$%^&*;:{}=-_~()?[]<>+' + String.fromCharCode(34) + String.fromCharCode(39);
+        let out = '';
+        for (let i = 0; i < s.length; i++) {
+          const ch = s[i].toLowerCase();
+          if (!punct.includes(ch)) out += ch;
+        }
+        return out.trim();
+      };
 
       const targetWordClean = cleanStr(card.term);
       const userWordClean = cleanStr(userWord);
