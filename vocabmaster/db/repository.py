@@ -1005,6 +1005,109 @@ def get_new_cards(
     return results
 
 
+def get_reinforcement_cards(
+    conn: sqlite3.Connection,
+    user_id: str,
+    deck_id: Optional[str] = None,
+    path_id: Optional[str] = None,
+    learning_language: Optional[str] = None,
+    limit: int = 20,
+) -> List[Dict[str, Any]]:
+    clauses = ["s.user_id = ?"]
+    params: List[Any] = [user_id]
+
+    if deck_id:
+        clauses.append("s.deck_id = ?")
+        params.append(deck_id)
+    elif path_id:
+        clauses.append("s.deck_id IN (SELECT deck_id FROM path_decks WHERE path_id = ?)")
+        params.append(path_id)
+
+    if learning_language:
+        clauses.append("v.language = ?")
+        params.append(learning_language)
+
+    sql = f"""
+    SELECT s.*, v.term, v.definition, v.language, v.ipa, v.part_of_speech,
+           v.language_specific_fields, v.examples, v.root_word, v.audio_url
+    FROM srs_cards s
+    JOIN vocabulary_items v ON s.vocab_id = v.id
+    WHERE {' AND '.join(clauses)}
+    ORDER BY 
+        CASE WHEN s.state IN ('RELEARNING', 'LEARNING') OR s.lapses > 0 THEN 0 ELSE 1 END ASC,
+        s.due_date ASC,
+        s.created_at ASC
+    LIMIT ?
+    """
+    params.append(limit)
+    rows = conn.execute(sql, params).fetchall()
+    results = []
+    for r in rows:
+        d = dict(r)
+        if "language_specific_fields" in d and isinstance(d["language_specific_fields"], str):
+            try:
+                d["language_specific_fields"] = json.loads(d["language_specific_fields"])
+            except Exception:
+                d["language_specific_fields"] = {}
+        if "examples" in d and isinstance(d["examples"], str):
+            try:
+                d["examples"] = json.loads(d["examples"])
+            except Exception:
+                d["examples"] = []
+        results.append(d)
+    return results
+
+
+def get_lapsed_or_weak_cards(
+    conn: sqlite3.Connection,
+    user_id: str,
+    deck_id: Optional[str] = None,
+    path_id: Optional[str] = None,
+    learning_language: Optional[str] = None,
+    limit: int = 50,
+) -> List[Dict[str, Any]]:
+    clauses = ["s.user_id = ?", "(s.lapses > 0 OR s.state IN ('RELEARNING', 'LEARNING') OR s.ease_factor < 2.3)"]
+    params: List[Any] = [user_id]
+
+    if deck_id:
+        clauses.append("s.deck_id = ?")
+        params.append(deck_id)
+    elif path_id:
+        clauses.append("s.deck_id IN (SELECT deck_id FROM path_decks WHERE path_id = ?)")
+        params.append(path_id)
+
+    if learning_language:
+        clauses.append("v.language = ?")
+        params.append(learning_language)
+
+    sql = f"""
+    SELECT s.*, v.term, v.definition, v.language, v.ipa, v.part_of_speech,
+           v.language_specific_fields, v.examples, v.root_word, v.audio_url
+    FROM srs_cards s
+    JOIN vocabulary_items v ON s.vocab_id = v.id
+    WHERE {' AND '.join(clauses)}
+    ORDER BY s.lapses DESC, s.ease_factor ASC, s.due_date ASC
+    LIMIT ?
+    """
+    params.append(limit)
+    rows = conn.execute(sql, params).fetchall()
+    results = []
+    for r in rows:
+        d = dict(r)
+        if "language_specific_fields" in d and isinstance(d["language_specific_fields"], str):
+            try:
+                d["language_specific_fields"] = json.loads(d["language_specific_fields"])
+            except Exception:
+                d["language_specific_fields"] = {}
+        if "examples" in d and isinstance(d["examples"], str):
+            try:
+                d["examples"] = json.loads(d["examples"])
+            except Exception:
+                d["examples"] = []
+        results.append(d)
+    return results
+
+
 def get_due_and_new_counts(
     conn: sqlite3.Connection,
     user_id: str,
@@ -1251,6 +1354,93 @@ def get_session_card_logs(
     """
     rows = conn.execute(sql, (session_id, user_id)).fetchall()
     return [dict(r) for r in rows]
+
+
+def get_vocab_study_history(
+    conn: sqlite3.Connection, vocab_id: str, user_id: str, limit: int = 50
+) -> Dict[str, Any]:
+    vocab = get_vocab_item_by_id(conn, vocab_id, user_id)
+    srs_card = get_srs_card_by_vocab_id(conn, vocab_id)
+
+    sql = """
+    SELECT l.*, s.interval_days as card_interval, s.state as card_state
+    FROM session_card_logs l
+    JOIN srs_cards s ON l.card_id = s.id
+    WHERE s.vocab_id = ? AND l.user_id = ?
+    ORDER BY l.created_at DESC
+    LIMIT ?
+    """
+    rows = conn.execute(sql, (vocab_id, user_id, limit)).fetchall()
+    logs = [dict(r) for r in rows]
+
+    total_attempts = len(logs)
+    correct_count = sum(1 for l in logs if l.get("is_correct"))
+    retention_rate = round((correct_count / total_attempts * 100), 1) if total_attempts > 0 else 0.0
+
+    return {
+        "vocab_id": vocab_id,
+        "term": vocab.get("term") if vocab else "",
+        "definition": vocab.get("definition") if vocab else "",
+        "ipa": vocab.get("ipa") if vocab else "",
+        "language": vocab.get("language") if vocab else "en",
+        "total_attempts": total_attempts,
+        "correct_count": correct_count,
+        "incorrect_count": total_attempts - correct_count,
+        "retention_rate": retention_rate,
+        "srs_card": srs_card,
+        "history": logs,
+    }
+
+
+def get_srs_distribution(
+    conn: sqlite3.Connection,
+    user_id: str,
+    learning_language: Optional[str] = None,
+    deck_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    clauses = ["s.user_id = ?"]
+    params: List[Any] = [user_id]
+    if learning_language:
+        clauses.append("v.language = ?")
+        params.append(learning_language)
+    if deck_id:
+        clauses.append("s.deck_id = ?")
+        params.append(deck_id)
+
+    where_sql = f"WHERE {' AND '.join(clauses)}"
+    sql = f"""
+    SELECT
+        COUNT(s.id) AS total_cards,
+        SUM(CASE WHEN s.interval_days <= 1.0 OR s.state IN ('NEW', 'RELEARNING') THEN 1 ELSE 0 END) AS box_1_day,
+        SUM(CASE WHEN s.interval_days > 1.0 AND s.interval_days <= 3.0 THEN 1 ELSE 0 END) AS box_3_days,
+        SUM(CASE WHEN s.interval_days > 3.0 AND s.interval_days <= 7.0 THEN 1 ELSE 0 END) AS box_7_days,
+        SUM(CASE WHEN s.interval_days > 7.0 AND s.interval_days <= 14.0 THEN 1 ELSE 0 END) AS box_14_days,
+        SUM(CASE WHEN s.interval_days > 14.0 THEN 1 ELSE 0 END) AS box_30_plus_days,
+        SUM(CASE WHEN s.lapses > 0 OR s.state = 'RELEARNING' THEN 1 ELSE 0 END) AS lapsed_count
+    FROM srs_cards s
+    JOIN vocabulary_items v ON s.vocab_id = v.id
+    {where_sql}
+    """
+    row = conn.execute(sql, params).fetchone()
+    if not row:
+        return {
+            "total_cards": 0,
+            "box_1_day": 0,
+            "box_3_days": 0,
+            "box_7_days": 0,
+            "box_14_days": 0,
+            "box_30_plus_days": 0,
+            "lapsed_count": 0,
+        }
+    return {
+        "total_cards": int(row["total_cards"] or 0),
+        "box_1_day": int(row["box_1_day"] or 0),
+        "box_3_days": int(row["box_3_days"] or 0),
+        "box_7_days": int(row["box_7_days"] or 0),
+        "box_14_days": int(row["box_14_days"] or 0),
+        "box_30_plus_days": int(row["box_30_plus_days"] or 0),
+        "lapsed_count": int(row["lapsed_count"] or 0),
+    }
 
 
 def list_user_sessions(

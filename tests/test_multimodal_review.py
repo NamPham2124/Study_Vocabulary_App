@@ -234,3 +234,94 @@ def test_deck_rename_and_seed_template(client, auth_headers):
     assert reset_data["status"] == "ok"
     assert "Bộ Từ Vựng Mẫu" in reset_data["deck"]["name"]
 
+
+def test_dynamic_masking_quiz_and_lapse_tracking(client, auth_headers):
+    # 1. Create Deck & Vocab
+    d_res = client.post("/api/decks", headers=auth_headers, json={"name": "Quiz Deck", "target_language": "en"})
+    deck_id = d_res.json()["id"]
+
+    v_res = client.post(
+        "/api/vocab",
+        headers=auth_headers,
+        json={
+            "deck_id": deck_id,
+            "term": "ubiquitous",
+            "language": "en",
+            "definition": "phổ biến, có mặt khắp nơi",
+            "ipa": "/juːˈbɪk.wɪ.təs/",
+            "part_of_speech": "adjective"
+        }
+    )
+    vocab_id = v_res.json()["id"]
+
+    # 2. Submit wrong answer / lapse (Chưa thuộc)
+    lapse_sub = client.post(
+        "/api/practice/submit",
+        headers=auth_headers,
+        json={
+            "practice_type": "multimodal_mode4",
+            "vocab_id": vocab_id,
+            "prompt": "u ＿ i ＿ u ＿ t ＿ u ＿ - phổ biến, có mặt khắp nơi",
+            "user_text": "Từ: ubiq... | Sai",
+            "model_answer": "ubiquitous - phổ biến, có mặt khắp nơi",
+            "self_assessment_score": 1,
+            "is_correct": False
+        }
+    )
+    assert lapse_sub.status_code == 200
+
+    # 3. Check vocabulary study history
+    hist_res = client.get(f"/api/vocab/{vocab_id}/history", headers=auth_headers)
+    assert hist_res.status_code == 200
+    hist = hist_res.json()
+    assert hist["total_attempts"] >= 1
+    assert hist["incorrect_count"] >= 1
+    assert hist["history"][0]["is_correct"] in (0, False)
+
+    # 4. Check lapsed list includes this card
+    lapsed_res = client.get("/api/srs/lapsed?language=en", headers=auth_headers)
+    assert lapsed_res.status_code == 200
+    lapsed_cards = lapsed_res.json()
+    found_lapsed = next((c for c in lapsed_cards if c["vocab_id"] == vocab_id), None)
+    assert found_lapsed is not None
+    assert found_lapsed["lapses"] >= 1
+
+    # 5. Submit correct answer (Đã thuộc)
+    correct_sub = client.post(
+        "/api/practice/submit",
+        headers=auth_headers,
+        json={
+            "practice_type": "multimodal_mode1",
+            "vocab_id": vocab_id,
+            "prompt": "/juːˈbɪk.wɪ.təs/ - phổ biến, có mặt khắp nơi",
+            "user_text": "Từ: ubiquitous | Nghĩa: phổ biến",
+            "model_answer": "ubiquitous - phổ biến",
+            "self_assessment_score": 4,
+            "is_correct": True
+        }
+    )
+    assert correct_sub.status_code == 200
+
+    # 6. Verify history updated with correct count & retention rate
+    hist_res2 = client.get(f"/api/vocab/{vocab_id}/history", headers=auth_headers)
+    assert hist_res2.status_code == 200
+    hist2 = hist_res2.json()
+    assert hist2["total_attempts"] >= 2
+    assert hist2["correct_count"] >= 1
+    assert hist2["retention_rate"] > 0
+
+    # 7. Verify UI has all key interactive elements
+    ui_res = client.get("/")
+    assert ui_res.status_code == 200
+    html = ui_res.text
+    assert "modalVocabHistory" in html
+    assert "reviewSubTabRelearnContainer" in html
+    assert "shuffleAndRestartQuiz" in html
+    assert "makeCloze" in html
+    assert "openVocabHistoryModal" in html
+    assert "loadRelearnCenterData" in html
+    assert "startLapsedRelearnSession" in html
+    assert "relearnBox1" in html
+    assert "relearnBox5" in html
+
+

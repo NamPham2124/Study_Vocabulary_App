@@ -108,7 +108,18 @@ def start_or_resume_session(
         else:
             session_type = "daily_20min"
 
-    if session_type == "deck_study":
+    if session_type == "srs_relearn":
+        relearn_cards = repository.get_lapsed_or_weak_cards(
+            conn, user_id, deck_id=deck_id, path_id=path_id, learning_language=resolved_lang, limit=limit_rev or 50
+        )
+        if not relearn_cards:
+            relearn_cards = repository.get_reinforcement_cards(
+                conn, user_id, deck_id=deck_id, path_id=path_id, learning_language=resolved_lang, limit=20
+            )
+        review_ids = [c["id"] for c in relearn_cards]
+        primary_queue = review_ids
+        initial_phase = "review"
+    elif session_type == "deck_study":
         primary_queue = review_ids + new_ids
         initial_phase = "deck_study"
     elif session_type == "review_only":
@@ -129,6 +140,24 @@ def start_or_resume_session(
             primary_queue = []
             initial_phase = "completed"
 
+    # If the primary queue is empty, check if we should pull reinforcement cards
+    # (i.e. user is in unlimited mode or has not studied any cards yet today)
+    if not primary_queue:
+        should_reinforce = unlimited or (already_new == 0 and already_rev == 0)
+        if should_reinforce:
+            reinforce_cards = repository.get_reinforcement_cards(
+                conn, user_id, deck_id=deck_id, path_id=path_id, learning_language=resolved_lang, limit=min(limit_rev or 20, 30)
+            )
+            if reinforce_cards:
+                review_ids = [c["id"] for c in reinforce_cards]
+                primary_queue = review_ids
+                if session_type == "deck_study":
+                    initial_phase = "deck_study"
+                elif session_type == "practice_only":
+                    initial_phase = "practice"
+                else:
+                    initial_phase = "review"
+
     phase_data = {
         "review": review_ids,
         "new_words": new_ids,
@@ -147,6 +176,7 @@ def start_or_resume_session(
             context_title = f"Deck: {deck['name']}"
 
     now = datetime.now(timezone.utc).isoformat()
+    session_status = "ACTIVE" if primary_queue else ("COMPLETED" if (already_new > 0 or already_rev > 0) else "EMPTY")
     session_data = {
         "id": session_id,
         "user_id": user_id,
@@ -157,7 +187,7 @@ def start_or_resume_session(
         "session_date": now[:10],
         "session_type": session_type,
         "current_phase": initial_phase,
-        "status": "ACTIVE" if primary_queue else "COMPLETED",
+        "status": session_status,
         "card_ids_queue": primary_queue,
         "current_index": 0,
         "total_cards": len(primary_queue),
@@ -380,6 +410,7 @@ def submit_card_answer(
             "session": advance_res["session"],
             "phase_transitioned": True,
             "is_completed": advance_res["is_completed"],
+            "is_correct": is_correct,
             "completed_cards": completed_cards,
             "total_cards": advance_res["session"]["total_cards"],
             "correct_count": correct_count,
@@ -410,6 +441,7 @@ def submit_card_answer(
         "session": updated_session,
         "phase_transitioned": False,
         "is_completed": is_completed,
+        "is_correct": is_correct,
         "completed_cards": completed_cards,
         "total_cards": len(queue),
         "correct_count": correct_count,

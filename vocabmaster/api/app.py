@@ -54,6 +54,7 @@ from vocabmaster.importer.processor import (
     DedupMode,
 )
 from vocabmaster.session import manager as session_manager
+from vocabmaster.srs.scheduler import review_card
 
 
 class DeckCreateRequest(BaseModel):
@@ -120,7 +121,9 @@ class PracticeSubmitRequest(BaseModel):
     prompt: str
     user_text: str
     model_answer: str = ""
-    self_assessment_score: int = Field(4, ge=1, le=5)
+    self_assessment_score: int = Field(4, ge=0, le=5)
+    is_correct: Optional[bool] = None
+    session_id: Optional[str] = None
 
 
 def get_current_user(
@@ -737,6 +740,18 @@ def create_app(db_path: Optional[str] = None) -> FastAPI:
                 raise HTTPException(status_code=404, detail="Vocabulary item not found")
             return {"deleted": True, "vocab_id": vocab_id}
 
+    @app.get("/api/vocab/{vocab_id}/history")
+    def get_vocabulary_study_history(
+        vocab_id: str,
+        limit: int = Query(50, ge=1, le=200),
+        user: Dict[str, Any] = Depends(get_current_user),
+    ):
+        with get_db(db_path) as conn:
+            item = repository.get_vocab_item_by_id(conn, vocab_id, user["id"])
+            if not item:
+                raise HTTPException(status_code=404, detail="Vocabulary item not found")
+            return repository.get_vocab_study_history(conn, vocab_id, user["id"], limit=limit)
+
     # -----------------------------------------------------------------------
     # Word Relationships Endpoints (Root words, synonyms, etc.)
     # -----------------------------------------------------------------------
@@ -1002,6 +1017,32 @@ def create_app(db_path: Optional[str] = None) -> FastAPI:
                 limit=limit,
             )
 
+    @app.get("/api/srs/distribution")
+    def get_srs_distribution_endpoint(
+        deck_id: Optional[str] = Query(None),
+        language: Optional[str] = Query(None),
+        user: Dict[str, Any] = Depends(get_current_user),
+    ):
+        with get_db(db_path) as conn:
+            lang = language or user.get("active_learning_language", "en")
+            return repository.get_srs_distribution(
+                conn, user_id=user["id"], learning_language=lang, deck_id=deck_id
+            )
+
+    @app.get("/api/srs/lapsed")
+    def get_lapsed_cards_endpoint(
+        deck_id: Optional[str] = Query(None),
+        path_id: Optional[str] = Query(None),
+        language: Optional[str] = Query(None),
+        limit: int = Query(50, ge=1, le=200),
+        user: Dict[str, Any] = Depends(get_current_user),
+    ):
+        with get_db(db_path) as conn:
+            lang = language or user.get("active_learning_language", "en")
+            return repository.get_lapsed_or_weak_cards(
+                conn, user_id=user["id"], deck_id=deck_id, path_id=path_id, learning_language=lang, limit=limit
+            )
+
     # -----------------------------------------------------------------------
     # Practice Submissions (Speaking & Writing)
     # -----------------------------------------------------------------------
@@ -1024,6 +1065,56 @@ def create_app(db_path: Optional[str] = None) -> FastAPI:
                 model_answer=req.model_answer,
                 self_assessment_score=req.self_assessment_score,
             )
+            # Link to SRS card & record in session_card_logs so study history tracks every attempt
+            if req.vocab_id:
+                srs_card = repository.get_srs_card_by_vocab_id(conn, req.vocab_id)
+                if srs_card and srs_card.get("user_id") == user["id"]:
+                    rating = req.self_assessment_score
+                    is_corr = req.is_correct if req.is_correct is not None else (rating >= 3)
+                    updated_srs = review_card(conn, srs_card["id"], user["id"], rating)
+
+                    # Ensure valid session exists for foreign key constraint
+                    sess_id = req.session_id
+                    if sess_id:
+                        existing_sess = repository.get_session_by_id(conn, sess_id, user["id"])
+                        if not existing_sess:
+                            sess_id = None
+                    if not sess_id:
+                        sess_id = str(uuid.uuid4())
+                        repository.create_session(
+                            conn,
+                            {
+                                "id": sess_id,
+                                "user_id": user["id"],
+                                "deck_id": srs_card.get("deck_id"),
+                                "learning_language": user.get("active_learning_language", "en"),
+                                "title": "Interactive Practice Quiz",
+                                "session_type": "practice_quiz",
+                                "current_phase": "practice",
+                                "status": "COMPLETED",
+                                "card_ids_queue": [srs_card["id"]],
+                                "total_cards": 1,
+                                "completed_cards": 1,
+                            },
+                        )
+
+                    log_id = str(uuid.uuid4())
+                    repository.record_card_log(
+                        conn,
+                        {
+                            "id": log_id,
+                            "session_id": sess_id,
+                            "card_id": srs_card["id"],
+                            "user_id": user["id"],
+                            "rating": rating,
+                            "exercise_type": req.practice_type,
+                            "user_response": req.user_text,
+                            "is_correct": is_corr,
+                            "time_spent_seconds": 3.0,
+                            "scheduled_next_interval": updated_srs["interval_days"],
+                            "was_new_card": 1 if srs_card.get("state") == "NEW" else 0,
+                        },
+                    )
             return sub
 
     @app.get("/api/practice")

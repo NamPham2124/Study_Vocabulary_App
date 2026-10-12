@@ -408,6 +408,9 @@ HTML_CONTENT = """<!DOCTYPE html>
             <button onclick="startDailyStructuredSession()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-600/30 transition flex items-center gap-2">
               <i class="fa-solid fa-play"></i> Học 20 Phút
             </button>
+            <button onclick="startDailyStructuredSession(true)" title="Ôn tập tự do không bị giới hạn số thẻ mỗi ngày" class="px-3.5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-teal-600/20 transition flex items-center gap-1.5">
+              <i class="fa-solid fa-infinity"></i> Ôn Tập Không Giới Hạn
+            </button>
             <button onclick="seedSampleTemplateDeck()" title="Tạo 1 bộ từ vựng mẫu có sẵn từ vựng tiêu chuẩn" class="px-3.5 py-2.5 bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow">
               <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i> Thêm Bộ Thẻ Mẫu
             </button>
@@ -704,13 +707,16 @@ HTML_CONTENT = """<!DOCTYPE html>
           </div>
         </div>
 
-        <!-- Sub-Tabs Switcher: SRS Flashcards Quiz vs 3-Way Interactive Practice -->
-        <div class="flex items-center gap-2 p-1.5 bg-slate-900/80 rounded-2xl border border-slate-800 max-w-fit">
+        <!-- Sub-Tabs Switcher: Quiz Đảo Đề vs SRS Flashcards vs SRS Relearn -->
+        <div class="flex flex-wrap items-center gap-2 p-1.5 bg-slate-900/80 rounded-2xl border border-slate-800 max-w-fit">
           <button id="btnSubTabReviewExercises" onclick="switchReviewSubTab('exercises')" class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-sm">
-            <i class="fa-solid fa-brain"></i> 🎯 Bài Tập Tự Luận 3 Chiều (Phiên âm • Đọc • Viết • Nghĩa)
+            <i class="fa-solid fa-shuffle"></i> 🎯 Quiz Đảo Đề & Giấu Từng Phần (Cloze)
           </button>
           <button id="btnSubTabReviewSRS" onclick="switchReviewSubTab('srs')" class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent">
-            <i class="fa-solid fa-layer-group"></i> ⚡ Thẻ Ôn Tập SRS (Flashcards Quiz)
+            <i class="fa-solid fa-layer-group"></i> ⚡ Thẻ Ôn Tập Flashcards SRS
+          </button>
+          <button id="btnSubTabReviewRelearn" onclick="switchReviewSubTab('relearn')" class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent">
+            <i class="fa-solid fa-stairs text-amber-400"></i> 🪜 Lặp Lại Ngắt Quãng (SRS Re-learning)
           </button>
         </div>
 
@@ -758,33 +764,36 @@ HTML_CONTENT = """<!DOCTYPE html>
           </div>
         </div>
 
-        <!-- SUB-TAB 2: 3-WAY MULTIMODAL INTERACTIVE EXERCISES -->
+        <!-- SUB-TAB 2: DYNAMIC RANDOMIZED CLOZE QUIZ & 3-WAY PRACTICE -->
         <div id="reviewSubTabExercisesContainer" class="space-y-6">
           <!-- Exercise Mode Selection Toolbar -->
           <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div class="flex flex-wrap items-center gap-2">
-              <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1">Chế độ bài tập:</span>
-              <button id="btnMultiModeMix" onclick="setMultiExMode('mix')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
-                <i class="fa-solid fa-shuffle"></i> <span>Trộn 3 Kiểu</span>
+              <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1">Chế độ giấu đề:</span>
+              <button id="btnMultiModeMix" onclick="setMultiExMode('mix')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 shadow-sm">
+                <i class="fa-solid fa-shuffle"></i> <span>🎲 Đảo Đề Ngẫu Nhiên</span>
               </button>
               <button id="btnMultiMode1" onclick="setMultiExMode('mode1')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800 border border-transparent">
-                <i class="fa-solid fa-headphones"></i> <span>Kiểu 1: Phiên âm ➔ Viết từ + Nghĩa TV</span>
+                <i class="fa-solid fa-eye-slash"></i> <span>🔤 Kiểu 1: Phiên âm</span>
               </button>
               <button id="btnMultiMode2" onclick="setMultiExMode('mode2')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800 border border-transparent">
-                <i class="fa-solid fa-microphone-lines"></i> <span>Kiểu 2: Từ vựng ➔ Đọc chuẩn + Ghi nghĩa TV</span>
+                <i class="fa-solid fa-language"></i> <span>📖 Kiểu 2: Từ vựng</span>
               </button>
               <button id="btnMultiMode3" onclick="setMultiExMode('mode3')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800 border border-transparent">
-                <i class="fa-solid fa-pen-nib"></i> <span>Kiểu 3: Nghĩa TV ➔ Đọc từ + Viết từ</span>
+                <i class="fa-solid fa-pen-nib"></i> <span>📝 Kiểu 3: Nghĩa TV</span>
+              </button>
+              <button id="btnMultiMode4" onclick="setMultiExMode('mode4')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800 border border-transparent">
+                <i class="fa-solid fa-puzzle-piece"></i> <span>🧩 Kiểu 4: Giấu Ký Tự (Cloze)</span>
               </button>
             </div>
 
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2">
+              <button onclick="shuffleAndRestartQuiz()" title="Đảo lại thứ tự và cách giấu đề mới cho các từ" class="px-3.5 py-1.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-amber-600/20">
+                <i class="fa-solid fa-arrows-spin"></i> <span>Đảo Lại Đề Thi</span>
+              </button>
               <span id="multiExSourceBadge" class="text-[10px] px-2.5 py-1 rounded-md bg-slate-800 border border-slate-700 text-slate-300 font-semibold">
                 Nguồn: Đang tải...
               </span>
-              <button onclick="initMultiExSession(true)" title="Làm mới danh sách từ" class="px-2.5 py-1 text-xs text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition border border-slate-700">
-                <i class="fa-solid fa-arrows-rotate"></i>
-              </button>
             </div>
           </div>
 
@@ -955,6 +964,101 @@ HTML_CONTENT = """<!DOCTYPE html>
                   <i class="fa-solid fa-layer-group"></i> Về danh sách thẻ SRS
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SUB-TAB 3: SRS RE-LEARNING CENTER (LẶP LẠI NGẮT QUÃNG) -->
+        <div id="reviewSubTabRelearnContainer" class="hidden space-y-6">
+          <!-- Leitner Box 5-Stage Ladder -->
+          <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+              <div>
+                <h3 class="text-lg font-black text-white flex items-center gap-2">
+                  <i class="fa-solid fa-stairs text-teal-400"></i> Bảng Phân Bố Chu Kỳ Lặp Lại Ngắt Quãng (Leitner & SM-2)
+                </h3>
+                <p class="text-xs text-slate-400 mt-0.5">Các nấc khoảng cách giúp đưa từ vựng từ trí nhớ ngắn hạn vào vỏ não dài hạn vĩnh viễn.</p>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <button onclick="startLapsedRelearnSession()" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-lg shadow-rose-600/30">
+                  <i class="fa-solid fa-triangle-exclamation"></i> Ôn Ngay Từ Chưa Thuộc (<span id="relearnLapsedBadgeCount">0</span>)
+                </button>
+                <button onclick="startDailyStructuredSession(true)" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold transition flex items-center gap-1.5">
+                  <i class="fa-solid fa-infinity text-teal-400"></i> Ôn Tự Do Không Giới Hạn
+                </button>
+              </div>
+            </div>
+
+            <!-- 5 Interval Boxes Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              <!-- Box 1 -->
+              <div class="bg-slate-950/70 border border-rose-500/30 rounded-2xl p-4 text-center space-y-1 relative overflow-hidden group hover:border-rose-500 transition">
+                <div class="text-[10px] font-bold text-rose-400 uppercase tracking-wider flex items-center justify-center gap-1">
+                  <span class="w-2 h-2 rounded-full bg-rose-400 inline-block"></span> Nấc 1: 1 Ngày
+                </div>
+                <div id="relearnBox1" class="text-3xl font-black text-rose-400">0</div>
+                <div class="text-[10px] text-slate-400 font-medium">Từ Mới & Chưa Thuộc</div>
+                <div class="text-[9px] text-slate-500">Cần lặp lại trong 24h</div>
+              </div>
+
+              <!-- Box 2 -->
+              <div class="bg-slate-950/70 border border-amber-500/30 rounded-2xl p-4 text-center space-y-1 relative overflow-hidden group hover:border-amber-500 transition">
+                <div class="text-[10px] font-bold text-amber-400 uppercase tracking-wider flex items-center justify-center gap-1">
+                  <span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span> Nấc 2: 3 Ngày
+                </div>
+                <div id="relearnBox2" class="text-3xl font-black text-amber-400">0</div>
+                <div class="text-[10px] text-slate-400 font-medium">Trí Nhớ Ngắn Hạn</div>
+                <div class="text-[9px] text-slate-500">Đã nhớ lần 1</div>
+              </div>
+
+              <!-- Box 3 -->
+              <div class="bg-slate-950/70 border border-yellow-500/30 rounded-2xl p-4 text-center space-y-1 relative overflow-hidden group hover:border-yellow-500 transition">
+                <div class="text-[10px] font-bold text-yellow-400 uppercase tracking-wider flex items-center justify-center gap-1">
+                  <span class="w-2 h-2 rounded-full bg-yellow-400 inline-block"></span> Nấc 3: 7 Ngày
+                </div>
+                <div id="relearnBox3" class="text-3xl font-black text-yellow-400">0</div>
+                <div class="text-[10px] text-slate-400 font-medium">Trí Nhớ Trung Hạn</div>
+                <div class="text-[9px] text-slate-500">Củng cố sau 1 tuần</div>
+              </div>
+
+              <!-- Box 4 -->
+              <div class="bg-slate-950/70 border border-teal-500/30 rounded-2xl p-4 text-center space-y-1 relative overflow-hidden group hover:border-teal-500 transition">
+                <div class="text-[10px] font-bold text-teal-400 uppercase tracking-wider flex items-center justify-center gap-1">
+                  <span class="w-2 h-2 rounded-full bg-teal-400 inline-block"></span> Nấc 4: 14 Ngày
+                </div>
+                <div id="relearnBox4" class="text-3xl font-black text-teal-400">0</div>
+                <div class="text-[10px] text-slate-400 font-medium">Khắc Sâu Trí Nhớ</div>
+                <div class="text-[9px] text-slate-500">Gần đạt phản xạ tự nhiên</div>
+              </div>
+
+              <!-- Box 5 -->
+              <div class="bg-slate-950/70 border border-emerald-500/30 rounded-2xl p-4 text-center space-y-1 relative overflow-hidden group hover:border-emerald-500 transition">
+                <div class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider flex items-center justify-center gap-1">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span> Nấc 5: 30+ Ngày
+                </div>
+                <div id="relearnBox5" class="text-3xl font-black text-emerald-400">0</div>
+                <div class="text-[10px] text-slate-400 font-medium">Thành Thạo (Mastered)</div>
+                <div class="text-[9px] text-slate-500">Trí nhớ dài hạn vĩnh viễn</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Lapsed / Weak Words Table -->
+          <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="text-sm font-bold text-white flex items-center gap-2">
+                  <i class="fa-solid fa-triangle-exclamation text-rose-400"></i> Danh Sách Từ Hay Quên & Cần Học Lại (Lapsed Words)
+                </h4>
+                <p class="text-[11px] text-slate-400 mt-0.5">Những từ từng bị điền sai hoặc note "Chưa thuộc" cần được ôn tập lặp lại ngay.</p>
+              </div>
+              <button onclick="loadRelearnCenterData()" class="px-2.5 py-1 text-xs text-slate-400 hover:text-white bg-slate-800 rounded-lg border border-slate-700 transition">
+                <i class="fa-solid fa-arrows-rotate"></i> Làm mới
+              </button>
+            </div>
+
+            <div id="relearnLapsedCardsList" class="space-y-2">
+              <!-- Rendered by JS -->
             </div>
           </div>
         </div>
@@ -1627,6 +1731,70 @@ HTML_CONTENT = """<!DOCTYPE html>
     </div>
   </div>
 
+  <!-- MODAL: VOCABULARY STUDY HISTORY & RETENTION -->
+  <div id="modalVocabHistory" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-2xl w-full shadow-2xl space-y-5 max-h-[90vh] flex flex-col animate-fadeIn">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <h3 class="text-xl font-black text-white" id="histModalTerm">...</h3>
+            <span id="histModalPos" class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-teal-300 border border-slate-700">noun</span>
+            <span id="histModalPhonetic" class="text-xs text-amber-300 font-mono">/ipa/</span>
+          </div>
+          <div id="histModalDefinition" class="text-xs text-slate-300 mt-1">Định nghĩa tiếng Việt</div>
+        </div>
+        <button onclick="closeModal('modalVocabHistory')" class="text-slate-400 hover:text-white p-2">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Quick Metrics Grid -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="bg-slate-950/70 p-3 rounded-xl border border-slate-800 text-center">
+          <div class="text-[10px] text-slate-400 font-medium">Tổng Lượt Học</div>
+          <div id="histModalTotalAttempts" class="text-xl font-black text-white mt-0.5">0</div>
+        </div>
+        <div class="bg-slate-950/70 p-3 rounded-xl border border-slate-800 text-center">
+          <div class="text-[10px] text-slate-400 font-medium">Lần Thuộc (Đúng)</div>
+          <div id="histModalCorrectCount" class="text-xl font-black text-emerald-400 mt-0.5">0</div>
+        </div>
+        <div class="bg-slate-950/70 p-3 rounded-xl border border-slate-800 text-center">
+          <div class="text-[10px] text-slate-400 font-medium">Chưa Thuộc (Quên)</div>
+          <div id="histModalIncorrectCount" class="text-xl font-black text-rose-400 mt-0.5">0</div>
+        </div>
+        <div class="bg-slate-950/70 p-3 rounded-xl border border-slate-800 text-center">
+          <div class="text-[10px] text-slate-400 font-medium">Chu Kỳ Kế Tiếp</div>
+          <div id="histModalNextInterval" class="text-xl font-black text-cyan-400 mt-0.5">1 ngày</div>
+        </div>
+      </div>
+
+      <!-- Retention Progress Bar -->
+      <div class="bg-slate-950/50 p-3 rounded-xl border border-slate-800/80 space-y-1.5">
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-slate-400 text-[11px] font-semibold">Tỷ lệ nhớ / thuộc từ vựng:</span>
+          <span id="histModalRetentionRate" class="font-bold text-teal-300">0%</span>
+        </div>
+        <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+          <div id="histModalRetentionBar" class="bg-gradient-to-r from-emerald-500 to-teal-400 h-full transition-all duration-300" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <!-- Timeline History Table -->
+      <div class="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[160px]">
+        <div class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Dòng thời gian các lần ôn tập:</div>
+        <div id="histModalTimelineList" class="space-y-2">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+
+      <div class="pt-2 border-t border-slate-800 flex justify-end">
+        <button onclick="closeModal('modalVocabHistory')" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition border border-slate-700">
+          Đóng
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- JAVASCRIPT APPLICATION CORE -->
   <script>
     // State management
@@ -2273,8 +2441,9 @@ HTML_CONTENT = """<!DOCTYPE html>
           <td class="px-4 py-3 text-center">
             <span class="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-slate-300 border border-slate-700 uppercase">SRS Ready</span>
           </td>
-          <td class="px-4 py-3 text-right">
-            <button onclick="deleteVocabItem('${it.id}')" class="text-slate-500 hover:text-rose-400 p-1 transition"><i class="fa-solid fa-trash-can"></i></button>
+          <td class="px-4 py-3 text-right whitespace-nowrap">
+            <button onclick="openVocabHistoryModal('${it.id}')" title="Xem lịch sử học và chu kỳ SRS" class="text-slate-400 hover:text-cyan-300 p-1.5 transition rounded-lg hover:bg-slate-800"><i class="fa-solid fa-clock-rotate-left"></i></button>
+            <button onclick="deleteVocabItem('${it.id}')" title="Xóa từ vựng" class="text-slate-500 hover:text-rose-400 p-1.5 transition rounded-lg hover:bg-slate-800"><i class="fa-solid fa-trash-can"></i></button>
           </td>
         `;
         tbody.appendChild(tr);
@@ -2348,12 +2517,16 @@ HTML_CONTENT = """<!DOCTYPE html>
         currentSession = res.session;
         currentCard = res.current_card;
         if (!currentCard || res.session.total_cards === 0) {
+          if (res.session.status === 'EMPTY') {
+            alert('Kho từ vựng của bạn đang trống! Hãy thêm từ mới hoặc tải lên tệp CSV/Excel trong phần "Nhập Dữ Liệu" để bắt đầu học.');
+            return;
+          }
           if (!unlimited) {
-            if (confirm('Bạn đã hoàn thành toàn bộ mục tiêu thẻ học hôm nay theo giới hạn hàng ngày! Bạn có muốn học tiếp ở chế độ Không Giới Hạn (Unlimited Mode)?')) {
+            if (confirm('Bạn đã hoàn thành toàn bộ mục tiêu thẻ học hôm nay theo giới hạn hàng ngày! Bạn có muốn học tiếp ở chế độ Ôn Tập Không Giới Hạn (Unlimited Mode) để củng cố thêm từ vựng không?')) {
               startDailyStructuredSession(true);
             }
           } else {
-            alert('Hiện tại không còn thẻ nào cần học trong không gian này.');
+            alert('Hiện tại tất cả từ vựng đều đang ở chu kỳ nhớ tốt. Bạn có thể làm quiz trắc nghiệm đảo đề tại Trung Tâm Ôn Tập.');
           }
           return;
         }
@@ -2576,44 +2749,45 @@ HTML_CONTENT = """<!DOCTYPE html>
     let isMultiExListening = false;
     let currentActiveExerciseMode = 'mode1';
     let isMultiExChecked = false;
+    let isMultiExRevealed = false;
 
     function switchReviewSubTab(subTab) {
       reviewActiveSubTab = subTab;
-      const isExercises = subTab === 'exercises';
-      
+
       const btnExercises = document.getElementById('btnSubTabReviewExercises');
       const btnSRS = document.getElementById('btnSubTabReviewSRS');
+      const btnRelearn = document.getElementById('btnSubTabReviewRelearn');
       const containerExercises = document.getElementById('reviewSubTabExercisesContainer');
       const containerSRS = document.getElementById('reviewSubTabSRSContainer');
+      const containerRelearn = document.getElementById('reviewSubTabRelearnContainer');
 
-      if (btnExercises && btnSRS) {
-        if (isExercises) {
-          btnExercises.className = 'px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-sm';
-          btnSRS.className = 'px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent';
-        } else {
-          btnSRS.className = 'px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-sm';
-          btnExercises.className = 'px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent';
-        }
-      }
+      const activeClass = 'px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-sm';
+      const inactiveClass = 'px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent';
 
-      if (containerExercises && containerSRS) {
-        containerExercises.classList.toggle('hidden', !isExercises);
-        containerSRS.classList.toggle('hidden', isExercises);
-      }
+      if (btnExercises) btnExercises.className = (subTab === 'exercises') ? activeClass : inactiveClass;
+      if (btnSRS) btnSRS.className = (subTab === 'srs') ? activeClass : inactiveClass;
+      if (btnRelearn) btnRelearn.className = (subTab === 'relearn') ? activeClass : inactiveClass;
 
-      if (isExercises && (!multiExCards || multiExCards.length === 0)) {
+      if (containerExercises) containerExercises.classList.toggle('hidden', subTab !== 'exercises');
+      if (containerSRS) containerSRS.classList.toggle('hidden', subTab !== 'srs');
+      if (containerRelearn) containerRelearn.classList.toggle('hidden', subTab !== 'relearn');
+
+      if (subTab === 'exercises' && (!multiExCards || multiExCards.length === 0)) {
         initMultiExSession();
+      } else if (subTab === 'relearn') {
+        loadRelearnCenterData();
       }
     }
 
     function setMultiExMode(mode) {
       multiExMode = mode;
-      const modes = ['mix', 'mode1', 'mode2', 'mode3'];
+      const modes = ['mix', 'mode1', 'mode2', 'mode3', 'mode4'];
       modes.forEach(m => {
         let btnId = 'btnMultiModeMix';
         if (m === 'mode1') btnId = 'btnMultiMode1';
         else if (m === 'mode2') btnId = 'btnMultiMode2';
         else if (m === 'mode3') btnId = 'btnMultiMode3';
+        else if (m === 'mode4') btnId = 'btnMultiMode4';
         const btn = document.getElementById(btnId);
         if (btn) {
           if (m === mode) {
@@ -2623,6 +2797,26 @@ HTML_CONTENT = """<!DOCTYPE html>
           }
         }
       });
+      renderMultiExCard();
+    }
+
+    function makeCloze(word) {
+      if (!word) return '';
+      return word.split('').map((ch, idx) => {
+        if (ch === ' ' || ch === '-' || ch === "'") return ch;
+        return (idx % 2 === 1) ? '＿' : ch;
+      }).join(' ');
+    }
+
+    function shuffleAndRestartQuiz() {
+      if (!multiExCards || multiExCards.length === 0) return;
+      multiExCards.sort(() => Math.random() - 0.5);
+      const masks = ['mode1', 'mode2', 'mode3', 'mode4'];
+      multiExCards.forEach(c => {
+        c._assignedMask = masks[Math.floor(Math.random() * masks.length)];
+      });
+      multiExIndex = 0;
+      multiExScore = { correct: 0, partial: 0, wrong: 0, total: multiExCards.length };
       renderMultiExCard();
     }
 
@@ -2714,6 +2908,7 @@ HTML_CONTENT = """<!DOCTYPE html>
 
       // Reset inputs & speech state
       isMultiExChecked = false;
+      isMultiExRevealed = false;
       document.getElementById('multiExWordInput').value = '';
       document.getElementById('multiExMeaningInput').value = '';
       multiExSpeechTranscript = '';
@@ -2742,8 +2937,8 @@ HTML_CONTENT = """<!DOCTYPE html>
 
       // Mode assignment
       if (multiExMode === 'mix') {
-        const cycle = ['mode1', 'mode2', 'mode3'];
-        currentActiveExerciseMode = cycle[multiExIndex % 3];
+        const cycle = ['mode1', 'mode2', 'mode3', 'mode4'];
+        currentActiveExerciseMode = card._assignedMask || cycle[multiExIndex % 4];
       } else {
         currentActiveExerciseMode = multiExMode;
       }
@@ -2771,6 +2966,7 @@ HTML_CONTENT = """<!DOCTYPE html>
         document.getElementById('multiExWordInput').placeholder = isChinese ? 'Gõ chữ Hán chính xác...' : 'Gõ từ tiếng Anh chính xác...';
         speakingContainer.classList.add('hidden');
         meaningInputContainer.classList.remove('hidden');
+        document.getElementById('multiExMeaningInputLabel').innerHTML = `<i class="fa-solid fa-pen text-teal-400"></i> 2. Tự ghi nghĩa tiếng Việt tương ứng:`;
         setTimeout(() => document.getElementById('multiExWordInput')?.focus(), 50);
 
       } else if (currentActiveExerciseMode === 'mode2') {
@@ -2781,11 +2977,15 @@ HTML_CONTENT = """<!DOCTYPE html>
         promptTitle.textContent = isChinese ? 'CHỮ HÁN MỤC TIÊU' : 'TỪ TIẾNG ANH MỤC TIÊU';
         promptMain.innerHTML = `<span class="text-white">${card.term}</span>`;
         promptExtra.innerHTML = `
+          <button onclick="playMultiExAudio()" class="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5 shadow-sm">
+            <i class="fa-solid fa-volume-high text-emerald-400"></i> Nghe phát âm mẫu
+          </button>
           <span class="text-xs px-2.5 py-1 rounded-lg bg-slate-800/80 text-slate-300 border border-slate-700 font-medium">${pos}</span>
         `;
         wordInputContainer.classList.add('hidden');
         speakingContainer.classList.remove('hidden');
         meaningInputContainer.classList.remove('hidden');
+        document.getElementById('multiExMeaningInputLabel').innerHTML = `<i class="fa-solid fa-pen text-teal-400"></i> Tự ghi nghĩa tiếng Việt tương ứng:`;
         setTimeout(() => document.getElementById('multiExMeaningInput')?.focus(), 50);
 
       } else if (currentActiveExerciseMode === 'mode3') {
@@ -2796,12 +2996,37 @@ HTML_CONTENT = """<!DOCTYPE html>
         promptTitle.textContent = 'ĐỊNH NGHĨA TIẾNG VIỆT';
         promptMain.innerHTML = `<span class="text-emerald-300 text-2xl sm:text-3xl font-bold">${card.definition}</span>`;
         promptExtra.innerHTML = `
+          <button onclick="playMultiExAudio()" class="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5 shadow-sm">
+            <i class="fa-solid fa-volume-high text-emerald-400"></i> Nghe âm thanh mẫu
+          </button>
           <span class="text-xs px-2.5 py-1 rounded-lg bg-slate-800/80 text-slate-300 border border-slate-700 font-medium">${pos}</span>
         `;
         speakingContainer.classList.remove('hidden');
         wordInputContainer.classList.remove('hidden');
         document.getElementById('multiExWordInputLabel').innerHTML = `<i class="fa-solid fa-keyboard text-cyan-400"></i> Viết từ vựng (${isChinese ? 'chữ Hán' : 'tiếng Anh'}):`;
         document.getElementById('multiExWordInput').placeholder = isChinese ? 'Gõ chữ Hán chính xác...' : 'Gõ từ tiếng Anh chính xác...';
+        meaningInputContainer.classList.add('hidden');
+        setTimeout(() => document.getElementById('multiExWordInput')?.focus(), 50);
+
+      } else if (currentActiveExerciseMode === 'mode4') {
+        // Kiểu 4: Giấu ký tự (Cloze) ➔ Gõ từ hoàn chỉnh
+        modeBadge.className = 'px-3 py-1 rounded-xl text-xs font-bold bg-purple-500/15 text-purple-300 border border-purple-500/30 flex items-center gap-1.5';
+        modeBadge.innerHTML = '<i class="fa-solid fa-puzzle-piece"></i> Kiểu 4: Giấu ký tự (Cloze) ➔ Gõ từ hoàn chỉnh';
+        guideText.textContent = 'Hệ thống đã giấu một số chữ cái. Dựa vào các chữ cái còn lại và nghĩa tiếng Việt, hãy gõ từ hoàn chỉnh.';
+        promptTitle.textContent = isChinese ? 'CHỮ BỊ GIẤU & NGHĨA' : 'TỪ BỊ GIẤU KÝ TỰ & NGHĨA';
+        const clozeTerm = makeCloze(card.term);
+        promptMain.innerHTML = `<span class="font-mono text-cyan-300 text-2xl sm:text-3xl tracking-widest font-bold">${clozeTerm}</span>`;
+        promptExtra.innerHTML = `
+          <button onclick="playMultiExAudio()" class="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5 shadow-sm">
+            <i class="fa-solid fa-volume-high text-emerald-400"></i> Nghe âm thanh
+          </button>
+          <div class="text-xs px-2.5 py-1 rounded-lg bg-slate-800/80 text-emerald-300 border border-slate-700 font-medium">Nghĩa: ${card.definition}</div>
+          <span class="text-xs px-2.5 py-1 rounded-lg bg-slate-800/80 text-slate-300 border border-slate-700 font-medium">${pos}</span>
+        `;
+        speakingContainer.classList.add('hidden');
+        wordInputContainer.classList.remove('hidden');
+        document.getElementById('multiExWordInputLabel').innerHTML = `<i class="fa-solid fa-keyboard text-cyan-400"></i> Gõ từ vựng hoàn chỉnh (${isChinese ? 'chữ Hán' : 'tiếng Anh'}):`;
+        document.getElementById('multiExWordInput').placeholder = isChinese ? 'Gõ chữ Hán hoàn chỉnh...' : 'Gõ từ tiếng Anh hoàn chỉnh...';
         meaningInputContainer.classList.add('hidden');
         setTimeout(() => document.getElementById('multiExWordInput')?.focus(), 50);
       }
@@ -2921,6 +3146,7 @@ HTML_CONTENT = """<!DOCTYPE html>
       if (currentActiveExerciseMode === 'mode1') {
         wordCorrect = (userWordClean === targetWordClean);
         meaningCorrect = (userMeaning.length > 0);
+        speechCorrect = true;
       } else if (currentActiveExerciseMode === 'mode2') {
         wordCorrect = true;
         speechCorrect = multiExSpokenVerified;
@@ -2929,39 +3155,64 @@ HTML_CONTENT = """<!DOCTYPE html>
         wordCorrect = (userWordClean === targetWordClean);
         speechCorrect = multiExSpokenVerified;
         meaningCorrect = true;
+      } else if (currentActiveExerciseMode === 'mode4') {
+        wordCorrect = (userWordClean === targetWordClean);
+        speechCorrect = true;
+        meaningCorrect = true;
       }
 
-      const allCorrect = (currentActiveExerciseMode === 'mode1' && wordCorrect && meaningCorrect) ||
-                         (currentActiveExerciseMode === 'mode2' && speechCorrect && meaningCorrect) ||
-                         (currentActiveExerciseMode === 'mode3' && wordCorrect && speechCorrect);
+      let allCorrect = false;
+      if (!isMultiExRevealed) {
+        if (currentActiveExerciseMode === 'mode1') allCorrect = wordCorrect && meaningCorrect;
+        else if (currentActiveExerciseMode === 'mode2') allCorrect = speechCorrect && meaningCorrect;
+        else if (currentActiveExerciseMode === 'mode3') allCorrect = wordCorrect && speechCorrect;
+        else if (currentActiveExerciseMode === 'mode4') allCorrect = wordCorrect;
+      }
 
       if (allCorrect) {
         multiExScore.correct++;
       } else {
         multiExScore.wrong++;
+        // Tự động xếp thẻ bị sai hoặc chưa thuộc vào cuối bài để kiểm tra lại
+        multiExCards.push(card);
+        multiExScore.total = multiExCards.length;
+        document.getElementById('multiExProgressText').textContent = `Câu ${multiExIndex + 1} / ${multiExCards.length}`;
+        const pct = Math.round(((multiExIndex + 1) / multiExCards.length) * 100);
+        document.getElementById('multiExProgressBar').style.width = `${pct}%`;
       }
 
       const feedbackBox = document.getElementById('multiExFeedbackBox');
       feedbackBox.classList.remove('hidden');
 
       const statusAlert = document.getElementById('multiExStatusAlert');
+      const vocabIdForHist = card.vocab_id || card.id;
       if (allCorrect) {
-        statusAlert.className = 'p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 flex items-center gap-3 text-xs';
+        statusAlert.className = 'p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs';
         statusAlert.innerHTML = `
-          <i class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
-          <div>
-            <div class="font-bold text-emerald-300">Xuất sắc! Bạn đã trả lời hoàn toàn chính xác! 🎉</div>
-            <div class="text-slate-300 text-[11px] mt-0.5">Tuyệt vời! Kiến thức từ vựng đã được củng cố và khắc sâu.</div>
+          <div class="flex items-center gap-3">
+            <i class="fa-solid fa-circle-check text-emerald-400 text-xl"></i>
+            <div>
+              <div class="font-bold text-emerald-300 text-sm">✅ ĐÃ THUỘC — Trả lời hoàn toàn chính xác! 🎉</div>
+              <div class="text-slate-300 text-[11px] mt-0.5">Từ vựng đã được củng cố và bước lên nấc chu kỳ tiếp theo trong trí nhớ dài hạn.</div>
+            </div>
           </div>
+          <button onclick="openVocabHistoryModal('${vocabIdForHist}')" class="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-300 rounded-lg text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5 shrink-0 self-start sm:self-auto shadow-sm">
+            <i class="fa-solid fa-clock-rotate-left"></i> Xem lịch sử học
+          </button>
         `;
       } else {
-        statusAlert.className = 'p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-center gap-3 text-xs';
+        statusAlert.className = 'p-4 rounded-xl border border-rose-500/30 bg-rose-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs';
         statusAlert.innerHTML = `
-          <i class="fa-solid fa-circle-exclamation text-amber-400 text-lg"></i>
-          <div>
-            <div class="font-bold text-amber-300">Cần củng cố thêm! Hãy đối chiếu đáp án chi tiết bên dưới 💪</div>
-            <div class="text-slate-300 text-[11px] mt-0.5">Xem lại từ vựng chuẩn xác và nghĩa để ghi nhớ sâu hơn nhé.</div>
+          <div class="flex items-center gap-3">
+            <i class="fa-solid fa-circle-xmark text-rose-400 text-xl"></i>
+            <div>
+              <div class="font-bold text-rose-300 text-sm">❌ CHƯA THUỘC — Tự động xếp vào cuối bài để ôn lại!</div>
+              <div class="text-slate-300 text-[11px] mt-0.5">Hệ thống đã ghi nhận trạng thái <strong>Chưa thuộc</strong> vào lịch sử học SRS và đưa từ này vào cuối danh sách bài để bạn làm lại cho tới khi thuộc.</div>
+            </div>
           </div>
+          <button onclick="openVocabHistoryModal('${vocabIdForHist}')" class="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-rose-300 rounded-lg text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5 shrink-0 self-start sm:self-auto shadow-sm">
+            <i class="fa-solid fa-clock-rotate-left"></i> Xem lịch sử học
+          </button>
         `;
       }
 
@@ -2973,7 +3224,7 @@ HTML_CONTENT = """<!DOCTYPE html>
       document.getElementById('feedbackPhoneticText').textContent = phonetic ? phonetic : '';
 
       const wordComp = document.getElementById('feedbackWordUserComparison');
-      if (currentActiveExerciseMode === 'mode1' || currentActiveExerciseMode === 'mode3') {
+      if (currentActiveExerciseMode === 'mode1' || currentActiveExerciseMode === 'mode3' || currentActiveExerciseMode === 'mode4') {
         if (wordCorrect) {
           wordComp.innerHTML = `<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-check"></i> Bạn đã viết: "${userWord}" (Chính xác)</span>`;
         } else {
@@ -2983,7 +3234,7 @@ HTML_CONTENT = """<!DOCTYPE html>
         if (speechCorrect) {
           wordComp.innerHTML = `<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-check"></i> Phát âm: Chuẩn xác</span>`;
         } else {
-          wordComp.innerHTML = `<span class="text-amber-300 font-semibold"><i class="fa-solid fa-info"></i> Phát âm: Hãy luyện đọc to từ "${card.term}"</span>`;
+          wordComp.innerHTML = `<span class="text-amber-300 font-semibold"><i class="fa-solid fa-info"></i> Phát âm: Cần luyện đọc to từ "${card.term}"</span>`;
         }
       }
 
@@ -3045,7 +3296,8 @@ HTML_CONTENT = """<!DOCTYPE html>
             prompt: `${card.term} (${phonetic}) - ${card.definition}`,
             user_text: `Từ: ${userWord || card.term} | Đọc: ${speechCorrect ? 'Chuẩn' : 'Chưa'} | Nghĩa: ${userMeaning || card.definition}`,
             model_answer: `${card.term} - ${card.definition}`,
-            self_assessment_score: allCorrect ? 5 : (wordCorrect || meaningCorrect ? 3 : 1)
+            self_assessment_score: allCorrect ? 4 : 1,
+            is_correct: allCorrect
           })
         });
       } catch (err) {
@@ -3054,7 +3306,7 @@ HTML_CONTENT = """<!DOCTYPE html>
     }
 
     function revealMultiExAnswer() {
-      multiExSpokenVerified = true;
+      isMultiExRevealed = true;
       const card = multiExCards[multiExIndex];
       if (!card) return;
       document.getElementById('multiExWordInput').value = card.term;
@@ -3063,6 +3315,7 @@ HTML_CONTENT = """<!DOCTYPE html>
     }
 
     function nextMultiExCard() {
+      isMultiExRevealed = false;
       multiExIndex++;
       renderMultiExCard();
     }
@@ -3123,6 +3376,169 @@ HTML_CONTENT = """<!DOCTYPE html>
         initMultiExSession();
       } catch (err) {
         console.error("Error in loadReviewCenterView:", err);
+      }
+    }
+
+    // VOCABULARY STUDY HISTORY MODAL
+    async function openVocabHistoryModal(vocabId) {
+      if (!vocabId) return;
+      try {
+        const modal = document.getElementById('modalVocabHistory');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+
+        document.getElementById('histModalTerm').textContent = 'Đang tải...';
+        document.getElementById('histModalPos').textContent = '';
+        document.getElementById('histModalPhonetic').textContent = '';
+        document.getElementById('histModalDefinition').textContent = '';
+        document.getElementById('histModalTotalAttempts').textContent = '-';
+        document.getElementById('histModalCorrectCount').textContent = '-';
+        document.getElementById('histModalIncorrectCount').textContent = '-';
+        document.getElementById('histModalNextInterval').textContent = '-';
+        document.getElementById('histModalRetentionRate').textContent = '0%';
+        document.getElementById('histModalRetentionBar').style.width = '0%';
+        const listEl = document.getElementById('histModalTimelineList');
+        listEl.innerHTML = '<div class="text-xs text-slate-400 py-4 text-center"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Đang tải dữ liệu lịch sử...</div>';
+
+        const data = await apiRequest(`/api/vocab/${vocabId}/history`);
+        const s = data.srs_card || {};
+        const logs = data.history || [];
+
+        const isZh = (data.language === 'zh' || data.vocab?.language === 'zh');
+        const phonetic = isZh 
+          ? (data.pinyin || data.vocab?.pinyin || data.language_specific_fields?.pinyin || '') 
+          : (data.ipa || data.vocab?.ipa || data.language_specific_fields?.ipa || '');
+
+        document.getElementById('histModalTerm').textContent = data.term || data.vocab?.term || 'Từ vựng';
+        document.getElementById('histModalPos').textContent = data.part_of_speech || data.vocab?.part_of_speech || (isZh ? 'Hán tự' : 'từ');
+        document.getElementById('histModalPhonetic').textContent = phonetic ? `[${phonetic}]` : '';
+        document.getElementById('histModalDefinition').textContent = data.definition || data.vocab?.definition || '';
+
+        const totalAttempts = data.total_attempts ?? data.metrics?.total_attempts ?? logs.length;
+        const correctAttempts = data.correct_count ?? data.correct_attempts ?? data.metrics?.correct_attempts ?? 0;
+        const incorrectAttempts = data.incorrect_count ?? data.incorrect_attempts ?? data.metrics?.incorrect_attempts ?? 0;
+        const nextInterval = (s.interval_days !== undefined ? s.interval_days : (logs[0]?.card_interval || 1));
+
+        document.getElementById('histModalTotalAttempts').textContent = totalAttempts;
+        document.getElementById('histModalCorrectCount').textContent = correctAttempts;
+        document.getElementById('histModalIncorrectCount').textContent = incorrectAttempts;
+        document.getElementById('histModalNextInterval').textContent = nextInterval + ' ngày';
+
+        const rate = data.retention_rate !== undefined ? data.retention_rate : (data.metrics?.retention_rate ?? 0);
+        document.getElementById('histModalRetentionRate').textContent = `${rate}%`;
+        document.getElementById('histModalRetentionBar').style.width = `${rate}%`;
+
+        listEl.innerHTML = '';
+        if (logs.length === 0) {
+          listEl.innerHTML = '<div class="text-xs text-slate-500 py-4 text-center">Chưa có lượt học nào được ghi lại cho từ này. Hãy bắt đầu ôn tập ngay!</div>';
+        } else {
+          logs.forEach(log => {
+            const isCorrect = log.is_correct;
+            const badgeClass = isCorrect
+              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+              : 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+            const badgeText = isCorrect ? 'ĐÃ THUỘC' : 'CHƯA THUỘC';
+            const badgeIcon = isCorrect ? 'fa-check' : 'fa-xmark';
+
+            const row = document.createElement('div');
+            row.className = 'p-3 rounded-xl bg-slate-950/70 border border-slate-800 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2';
+            row.innerHTML = `
+              <div class="space-y-0.5">
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${badgeClass} flex items-center gap-1">
+                    <i class="fa-solid ${badgeIcon}"></i> ${badgeText}
+                  </span>
+                  <span class="text-[11px] text-slate-300 font-medium">Hình thức: ${log.practice_type || 'SRS Review'}</span>
+                  ${log.rating ? `<span class="text-[10px] text-slate-500">(Đánh giá: ${log.rating}/5)</span>` : ''}
+                </div>
+                ${log.user_text ? `<div class="text-[11px] text-slate-400">Ghi nhận: <span class="text-slate-200">${log.user_text}</span></div>` : ''}
+              </div>
+              <div class="text-[10px] text-slate-500 shrink-0">
+                ${(log.created_at || '').replace('T', ' ').slice(0, 16)}
+              </div>
+            `;
+            listEl.appendChild(row);
+          });
+        }
+      } catch (err) {
+        alert('Lỗi tải lịch sử học: ' + err.message);
+      }
+    }
+
+    // SRS RE-LEARNING CENTER DATA & SESSION
+    async function loadRelearnCenterData() {
+      try {
+        const dist = await apiRequest(`/api/srs/distribution?language=${currentLearningLanguage}`);
+        if (dist) {
+          document.getElementById('relearnBox1').textContent = dist.box_1_day ?? dist.boxes?.box_1 ?? 0;
+          document.getElementById('relearnBox2').textContent = dist.box_3_days ?? dist.boxes?.box_2 ?? 0;
+          document.getElementById('relearnBox3').textContent = dist.box_7_days ?? dist.boxes?.box_3 ?? 0;
+          document.getElementById('relearnBox4').textContent = dist.box_14_days ?? dist.boxes?.box_4 ?? 0;
+          document.getElementById('relearnBox5').textContent = dist.box_30_plus_days ?? dist.boxes?.box_5 ?? 0;
+          document.getElementById('relearnLapsedBadgeCount').textContent = dist.lapsed_count ?? 0;
+        }
+
+        const lapsedList = await apiRequest(`/api/srs/lapsed?language=${currentLearningLanguage}&limit=50`);
+        const container = document.getElementById('relearnLapsedCardsList');
+        if (!container) return;
+        container.innerHTML = '';
+
+        if (!lapsedList || lapsedList.length === 0) {
+          container.innerHTML = '<div class="text-xs text-slate-500 py-4 text-center">Không có từ nào bị đánh dấu "Chưa thuộc" hoặc hay quên. Trí nhớ của bạn đang rất tuyệt vời!</div>';
+          return;
+        }
+
+        lapsedList.forEach(card => {
+          const isZh = (card.language === 'zh' || currentLearningLanguage === 'zh');
+          const phonetic = isZh ? (card.language_specific_fields?.pinyin || card.pinyin || '') : (card.ipa || card.language_specific_fields?.ipa || '');
+          const row = document.createElement('div');
+          row.className = 'flex items-center justify-between p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 text-xs hover:border-slate-700 transition';
+          row.innerHTML = `
+            <div class="space-y-0.5">
+              <div class="flex items-center gap-2">
+                <strong class="text-white text-sm">${card.term}</strong>
+                ${phonetic ? `<span class="text-amber-300 font-mono text-xs">[${phonetic}]</span>` : ''}
+                <span class="px-2 py-0.5 rounded text-[9px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                  <i class="fa-solid fa-triangle-exclamation mr-1"></i>Quên ${card.lapses || 1} lần
+                </span>
+                <span class="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-slate-800 text-slate-400 border border-slate-700 uppercase">
+                  ${card.state || 'RELEARNING'}
+                </span>
+              </div>
+              <div class="text-[11px] text-slate-400">${card.definition}</div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <button onclick="openVocabHistoryModal('${card.vocab_id || card.id}')" title="Xem lịch sử học" class="p-2 text-slate-400 hover:text-cyan-300 bg-slate-800/80 hover:bg-slate-800 rounded-lg border border-slate-700 transition text-xs flex items-center gap-1.5">
+                <i class="fa-solid fa-clock-rotate-left"></i> <span class="hidden sm:inline">Lịch sử</span>
+              </button>
+            </div>
+          `;
+          container.appendChild(row);
+        });
+      } catch (err) {
+        console.error("Error loading relearn center data:", err);
+      }
+    }
+
+    async function startLapsedRelearnSession() {
+      try {
+        const res = await apiRequest('/api/sessions/start', {
+          method: 'POST',
+          body: JSON.stringify({
+            session_type: 'srs_relearn',
+            learning_language: currentLearningLanguage,
+            unlimited: true
+          })
+        });
+        currentSession = res.session;
+        currentCard = res.current_card;
+        if (!currentCard || res.session.total_cards === 0) {
+          alert('Không có từ nào thuộc danh sách cần học lại trong không gian ngôn ngữ này! Bạn đã nhớ hết các từ rồi.');
+          return;
+        }
+        openActiveSessionUI();
+      } catch (err) {
+        alert(err.message);
       }
     }
 

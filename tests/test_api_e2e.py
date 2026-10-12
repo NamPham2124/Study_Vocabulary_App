@@ -270,3 +270,27 @@ def test_api_manual_vocab_creation_and_language_isolation(client, auth_headers):
     assert "current_streak" in streak_data
     assert "longest_streak" in streak_data
 
+    # 9. Verify Vocabulary Study History endpoint
+    v_hist_res = client.get(f"/api/vocab/{en_vocab['id']}/history", headers=auth_headers)
+    assert v_hist_res.status_code == 200
+    v_hist = v_hist_res.json()
+    assert v_hist["vocab_id"] == en_vocab["id"]
+    assert v_hist["term"] == "resilient"
+    assert "total_attempts" in v_hist
+    assert "retention_rate" in v_hist
+
+    # 10. Verify SRS Distribution & Lapsed Cards endpoints
+    dist_res = client.get("/api/srs/distribution?language=en", headers=auth_headers)
+    assert dist_res.status_code == 200
+    dist_data = dist_res.json()
+    assert "box_1_day" in dist_data
+    assert "box_3_days" in dist_data
+    assert "box_7_days" in dist_data
+    assert "box_14_days" in dist_data
+    assert "box_30_plus_days" in dist_data
+    assert "lapsed_count" in dist_data
+
+    lapsed_res = client.get("/api/srs/lapsed?language=en", headers=auth_headers)
+    assert lapsed_res.status_code == 200
+    assert isinstance(lapsed_res.json(), list)
+
