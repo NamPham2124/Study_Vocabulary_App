@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from typing import Optional
 from pydantic import BaseModel
 
 DEFAULT_DATA_DIR = Path(os.environ.get("VOCABMASTER_DATA_DIR", Path.home() / ".vocabmaster"))
@@ -11,6 +12,7 @@ DEFAULT_DB_PATH = Path(os.environ.get("VOCABMASTER_DB_PATH", DEFAULT_DATA_DIR / 
 class Settings(BaseModel):
     data_dir: Path = DEFAULT_DATA_DIR
     db_path: Path = DEFAULT_DB_PATH
+    database_url: Optional[str] = os.environ.get("DATABASE_URL")
     secret_key: str = os.environ.get("VOCABMASTER_SECRET_KEY", "vocabmaster-secret-key-change-in-production-1234567890")
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24 * 7  # 7 days

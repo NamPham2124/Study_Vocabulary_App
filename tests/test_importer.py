@@ -152,3 +152,86 @@ def test_import_deduplication_strategies(temp_db_path, test_user):
         assert res_overwrite.imported_count == 2
         item = repository.find_vocab_by_term(conn, "deck-dedup-1", "apple")
         assert item["definition"] == "trái táo mới"
+
+
+def test_column_mapping_ipa_variations():
+    """Verify that all common English/Vietnamese IPA headers are properly mapped."""
+    variations = [
+        ["Từ vựng", "Nghĩa", "Phát âm"],
+        ["term", "definition", "Phiên âm (IPA)"],
+        ["term", "definition", "Phát âm (IPA)"],
+        ["word", "meaning", "IPA (US)"],
+        ["word", "meaning", "IPA (UK)"],
+        ["word", "meaning", "Phonetics"],
+        ["word", "meaning", "Pronunciation"],
+        ["từ", "nghĩa", "cách đọc", "từ loại (pos)"],
+        ["word", "meaning", "phat am"],
+        ["word", "meaning", "Phiên âm quốc tế"],
+        ["word", "meaning", "Ký hiệu phiên âm"],
+        ["word", "meaning", "Transcription"],
+        ["Word", "Meaning", "IPA", "POS"],
+    ]
+
+    for headers in variations:
+        mapping = build_column_mapping(headers)
+        assert "ipa" in mapping, f"Failed to map 'ipa' for headers: {headers}"
+        assert "term" in mapping, f"Failed to map 'term' for headers: {headers}"
+        assert "definition" in mapping, f"Failed to map 'definition' for headers: {headers}"
+
+
+def test_csv_import_with_various_ipa_headers(temp_db_path, test_user):
+    """Verify end-to-end CSV import recognizing Vietnamese 'Phát âm' and 'Từ loại'."""
+    with get_db(temp_db_path) as conn:
+        deck = repository.create_deck(conn, "deck-ipa-test", test_user["id"], "IPA Test Deck")
+
+    csv_data = (
+        "Word,Meaning,Phát âm (IPA),Từ loại\n"
+        "perseverance,sự kiên trì bền bỉ,/ˌpɜː.sɪˈvɪə.rəns/,noun\n"
+        "resilient,có khả năng phục hồi nhanh,/rɪˈzɪl.jənt/,adjective\n"
+    ).encode("utf-8")
+
+    with get_db(temp_db_path) as conn:
+        res = import_vocabulary_file(
+            conn=conn,
+            user_id=test_user["id"],
+            deck_id="deck-ipa-test",
+            file_bytes=csv_data,
+            filename="words_with_ipa.csv",
+        )
+        assert res.imported_count == 2
+        assert res.error_count == 0
+
+        p = repository.find_vocab_by_term(conn, "deck-ipa-test", "perseverance")
+        assert p is not None
+        assert p["ipa"] == "/ˌpɜː.sɪˈvɪə.rəns/"
+        assert p["part_of_speech"] == "noun"
+
+        r = repository.find_vocab_by_term(conn, "deck-ipa-test", "resilient")
+        assert r is not None
+        assert r["ipa"] == "/rɪˈzɪl.jənt/"
+        assert r["part_of_speech"] == "adjective"
+
+
+def test_skip_dedup_backfills_missing_ipa(temp_db_path, test_user):
+    """Verify that re-importing under 'skip' deduplication mode backfills missing IPA for existing terms."""
+    with get_db(temp_db_path) as conn:
+        deck = repository.create_deck(conn, "deck-backfill", test_user["id"], "Backfill Test Deck")
+
+    # Step 1: Initial import without IPA
+    csv_1 = "term,definition\nmeticulous,tỉ mỉ kỹ lưỡng\n".encode("utf-8")
+    with get_db(temp_db_path) as conn:
+        import_vocabulary_file(conn, test_user["id"], "deck-backfill", csv_1, "step1.csv")
+        item = repository.find_vocab_by_term(conn, "deck-backfill", "meticulous")
+        assert item["ipa"] == ""
+
+    # Step 2: Re-import with 'Phát âm' column under dedup_strategy='skip'
+    csv_2 = "term,definition,Phát âm,Loại từ\nmeticulous,tỉ mỉ kỹ lưỡng,/məˈtɪk.jə.ləs/,adjective\n".encode("utf-8")
+    with get_db(temp_db_path) as conn:
+        res = import_vocabulary_file(
+            conn, test_user["id"], "deck-backfill", csv_2, "step2.csv", dedup_strategy="skip"
+        )
+        assert res.skipped_count == 1
+        item_updated = repository.find_vocab_by_term(conn, "deck-backfill", "meticulous")
+        assert item_updated["ipa"] == "/məˈtɪk.jə.ləs/"
+        assert item_updated["part_of_speech"] == "adjective"
+

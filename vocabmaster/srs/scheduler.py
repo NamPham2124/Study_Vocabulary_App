@@ -32,6 +32,7 @@ def review_card(
         now=now,
     )
 
+    cur_lapses = card.get("lapses", 0) + (1 if rating < 3 else 0)
     updated = repository.update_srs_card(
         conn=conn,
         card_id=card_id,
@@ -43,6 +44,7 @@ def review_card(
         ease_factor=res.ease_factor,
         due_date=res.due_date,
         last_reviewed_at=res.last_reviewed_at,
+        lapses=cur_lapses,
     )
     if not updated:
         raise RuntimeError(f"Failed to update card {card_id}")

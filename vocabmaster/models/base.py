@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 class Language(str, Enum):
     EN = "en"
+    ZH = "zh"  # Mandarin Chinese
     JA = "ja"
     DE = "de"
     ES = "es"
@@ -15,9 +16,14 @@ class Language(str, Enum):
     OTHER = "other"
 
 
+class ScriptPreference(str, Enum):
+    HANS = "hans"  # Simplified Chinese
+    HANT = "hant"  # Traditional Chinese
+
+
 class BaseVocabCreate(BaseModel):
     deck_id: str
-    term: str = Field(..., min_length=1, description="Word or phrase")
+    term: str = Field(..., min_length=1, description="Word or character")
     definition: str = Field(..., min_length=1, description="Meaning or translation")
     language: Language = Language.EN
     ipa: str = ""
@@ -27,6 +33,13 @@ class BaseVocabCreate(BaseModel):
     antonyms: List[str] = Field(default_factory=list)
     notes: str = ""
     tags: List[str] = Field(default_factory=list)
+    root_word: str = ""
+    root_word_id: Optional[str] = None
+    vietnamese_meanings: List[str] = Field(default_factory=list)
+    english_definitions: List[str] = Field(default_factory=list)
+    mnemonics: str = ""
+    audio_url: str = ""
+    is_favorite: bool = False
     language_specific_fields: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -41,6 +54,13 @@ class BaseVocabUpdate(BaseModel):
     antonyms: Optional[List[str]] = None
     notes: Optional[str] = None
     tags: Optional[List[str]] = None
+    root_word: Optional[str] = None
+    root_word_id: Optional[str] = None
+    vietnamese_meanings: Optional[List[str]] = None
+    english_definitions: Optional[List[str]] = None
+    mnemonics: Optional[str] = None
+    audio_url: Optional[str] = None
+    is_favorite: Optional[bool] = None
     language_specific_fields: Optional[Dict[str, Any]] = None
 
 
@@ -58,6 +78,13 @@ class BaseVocabResponse(BaseModel):
     antonyms: List[str] = Field(default_factory=list)
     notes: str = ""
     tags: List[str] = Field(default_factory=list)
+    root_word: str = ""
+    root_word_id: Optional[str] = None
+    vietnamese_meanings: List[str] = Field(default_factory=list)
+    english_definitions: List[str] = Field(default_factory=list)
+    mnemonics: str = ""
+    audio_url: str = ""
+    is_favorite: bool = False
     language_specific_fields: Dict[str, Any] = Field(default_factory=dict)
     created_at: str
     updated_at: str
