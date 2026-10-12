@@ -13,26 +13,39 @@ Full-featured SPA supporting all 10 core navigation views:
 """
 
 HTML_CONTENT = """<!DOCTYPE html>
-<html lang="vi" class="dark">
+<html lang="vi">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>VocabMaster — Hệ Thống Học Từ Vựng Thông Minh</title>
+  
+  <!-- Google Fonts: Josefin Sans (Headings) & Nunito (Body) from Burnout Web -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400;1,600&family=Nunito:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
+  
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script>
     tailwind.config = {
-      darkMode: 'class',
       theme: {
         extend: {
+          fontFamily: {
+            heading: ['"Josefin Sans"', 'sans-serif'],
+            sans: ['"Nunito"', 'sans-serif']
+          },
           colors: {
             brand: {
-              50: '#f0fdf4',
-              100: '#dcfce7',
-              500: '#22c55e',
-              600: '#16a34a',
-              700: '#15803d',
-              900: '#14532d',
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              200: '#a7f3d0',
+              300: '#6ee7b7',
+              400: '#34d399',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              800: '#065f46',
+              900: '#064e3b'
             }
           }
         }
@@ -40,13 +53,191 @@ HTML_CONTENT = """<!DOCTYPE html>
     }
   </script>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400;1,600&family=Nunito:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap');
+
+    :root {
+      --font-heading: 'Josefin Sans', sans-serif;
+      --font-body: 'Nunito', sans-serif;
+      --primary: #059669;
+      --primary-light: #34d399;
+      --primary-dark: #047857;
+      --accent: #0284c7;
+      --accent-warm: #f59e0b;
+      --streak-fire: #f97316;
+      --bg-gradient: linear-gradient(135deg, #f0fdf4 0%, #ecfeff 40%, #fefce8 100%);
+      --card-bg: rgba(255, 255, 255, 0.92);
+      --card-border: rgba(255, 255, 255, 0.85);
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-body) !important;
+      color: var(--text-main) !important;
+      background: var(--bg-gradient) !important;
+      background-attachment: fixed !important;
+      min-height: 100vh;
+    }
+
+    h1, h2, h3, h4, h5, h6, .font-heading {
+      font-family: var(--font-heading) !important;
+      color: #0f172a !important;
+    }
+
+    /* Glassmorphism Header & Navigation from Burnout Web */
+    header {
+      background: rgba(255, 255, 255, 0.94) !important;
+      backdrop-filter: blur(16px) !important;
+      -webkit-backdrop-filter: blur(16px) !important;
+      border-bottom: 1px solid rgba(226, 232, 240, 0.85) !important;
+      box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.03) !important;
+    }
+
+    aside#appSidebar {
+      background: rgba(255, 255, 255, 0.85) !important;
+      backdrop-filter: blur(16px) !important;
+      -webkit-backdrop-filter: blur(16px) !important;
+      border-right: 1px solid rgba(226, 232, 240, 0.85) !important;
+      box-shadow: 4px 0 20px -2px rgba(15, 23, 42, 0.02) !important;
+    }
+
+    /* Glassmorphism Cards & Panels from Burnout Web */
+    .bg-slate-900,
+    .bg-slate-900\/90,
+    .bg-slate-900\/80,
+    .bg-slate-900\/70,
+    .bg-slate-900\/60,
+    .bg-slate-900\/40,
+    .bg-slate-950,
+    .bg-slate-950\/90,
+    .bg-slate-950\/80,
+    .bg-slate-800,
+    .bg-slate-800\/90,
+    .bg-slate-800\/80,
+    .bg-slate-800\/60,
+    .bg-slate-800\/50,
+    .bg-slate-800\/40 {
+      background: rgba(255, 255, 255, 0.92) !important;
+      backdrop-filter: blur(16px) !important;
+      -webkit-backdrop-filter: blur(16px) !important;
+      border-color: rgba(226, 232, 240, 0.85) !important;
+      color: #1e293b !important;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04) !important;
+    }
+
+    /* Borders */
+    .border-slate-800,
+    .border-slate-800\/80,
+    .border-slate-800\/60,
+    .border-slate-700,
+    .border-slate-700\/80,
+    .border-slate-700\/60,
+    .border-slate-700\/50 {
+      border-color: #e2e8f0 !important;
+    }
+
+    /* Typography Colors */
+    .text-white {
+      color: #0f172a !important;
+    }
+
+    .text-slate-400,
+    .text-slate-500 {
+      color: #64748b !important;
+    }
+
+    .text-slate-300,
+    .text-slate-200,
+    .text-slate-100 {
+      color: #334155 !important;
+    }
+
+    /* Keep white text on primary buttons, badges, gradients */
+    button.bg-emerald-600,
+    button.bg-emerald-500,
+    button.bg-brand-600,
+    button.bg-brand-500,
+    button.bg-indigo-600,
+    button.bg-rose-600,
+    button.bg-blue-600,
+    button[type="submit"],
+    .bg-gradient-to-tr,
+    .bg-gradient-to-r {
+      color: #ffffff !important;
+    }
+
+    button.bg-emerald-600 *,
+    button.bg-emerald-500 *,
+    button.bg-brand-600 *,
+    button.bg-brand-500 *,
+    button[type="submit"] *,
+    .bg-gradient-to-tr *,
+    .bg-gradient-to-r * {
+      color: #ffffff !important;
+    }
+
+    /* Navigation item active state */
+    .nav-item.bg-emerald-500\/10 {
+      background: #ecfdf5 !important;
+      color: #059669 !important;
+      font-weight: 700 !important;
+      border-left: 3px solid #059669 !important;
+      box-shadow: 0 2px 8px rgba(5, 150, 105, 0.08) !important;
+    }
+
+    .nav-item:hover:not(.bg-emerald-500\/10) {
+      background: rgba(241, 245, 249, 0.8) !important;
+      color: #0f172a !important;
+    }
+
+    /* Form Inputs, Selects, Textareas */
+    input:not([type="checkbox"]):not([type="radio"]),
+    select,
+    textarea {
+      background: #ffffff !important;
+      border: 1px solid #cbd5e1 !important;
+      color: #0f172a !important;
+      border-radius: 0.75rem !important;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: #059669 !important;
+      box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15) !important;
+      outline: none !important;
+    }
+
+    /* Burnout Theme Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #a7f3d0;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #34d399;
+    }
+
+    /* Modals */
+    .fixed.inset-0.bg-slate-950\/90,
+    .fixed.inset-0.bg-slate-950\/80 {
+      background: rgba(15, 23, 42, 0.45) !important;
+      backdrop-filter: blur(14px) !important;
+      -webkit-backdrop-filter: blur(14px) !important;
+    }
+
     .font-cjk { font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", sans-serif; }
-    .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
-    .scrollbar-thin::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-    .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-brand-500 selection:text-white">
+<body class="bg-gradient-to-br from-emerald-50 via-teal-50 to-amber-50 min-h-screen text-slate-800 antialiased selection:bg-emerald-200 selection:text-emerald-900 font-sans flex flex-col">
 
   <!-- Top Navigation Header -->
   <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-40">
@@ -57,17 +248,17 @@ HTML_CONTENT = """<!DOCTYPE html>
           <i class="fa-solid fa-graduation-cap text-lg"></i>
         </div>
         <div>
-          <span class="text-xl font-black tracking-tight bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">VocabMaster</span>
-          <span class="text-[10px] px-2 py-0.5 ml-1.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold uppercase tracking-wider">SM-2+ v2.0</span>
+          <span class="text-xl font-black tracking-tight bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 bg-clip-text text-transparent">VocabMaster</span>
+          <span class="text-[10px] px-2 py-0.5 ml-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold uppercase tracking-wider">SM-2+ v2.0</span>
         </div>
       </div>
 
       <!-- Header Center: Quick Language Switcher & Active Path -->
       <div id="headerStudyContext" class="hidden md:flex items-center gap-3">
         <!-- Active Workspace Badge -->
-        <div id="headerWorkspaceBadge" class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 shadow-sm">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span class="font-bold text-emerald-300">🇬🇧 English Mode</span>
+        <div id="headerWorkspaceBadge" class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 shadow-sm">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span class="font-bold text-emerald-700">🇬🇧 English Mode</span>
         </div>
 
         <!-- Learning Language Dropdown -->

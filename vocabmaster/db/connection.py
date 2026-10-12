@@ -106,6 +106,9 @@ class PgConnWrapper:
             self.execute(stmt)
 
 
+_CACHED_PG_WRAPPER: Optional[PgConnWrapper] = None
+
+
 class DatabaseManager:
     """Manages database connections (SQLite or Supabase PostgreSQL)."""
 
@@ -152,6 +155,21 @@ class DatabaseManager:
         return conn
 
     def _get_pg_connection(self) -> PgConnWrapper:
+        global _CACHED_PG_WRAPPER
+        if _CACHED_PG_WRAPPER is not None:
+            try:
+                # Fast connection liveness check
+                cur = _CACHED_PG_WRAPPER._conn.cursor()
+                cur.execute("SELECT 1")
+                cur.close()
+                return _CACHED_PG_WRAPPER
+            except Exception:
+                try:
+                    _CACHED_PG_WRAPPER.close()
+                except Exception:
+                    pass
+                _CACHED_PG_WRAPPER = None
+
         parsed = urlparse(self.database_url)
         username = parsed.username
         password = parsed.password
@@ -170,7 +188,8 @@ class DatabaseManager:
                 database=database,
             )
             raw_conn.autocommit = False
-            return PgConnWrapper(raw_conn)
+            _CACHED_PG_WRAPPER = PgConnWrapper(raw_conn)
+            return _CACHED_PG_WRAPPER
         except ImportError:
             import psycopg2
 
@@ -181,7 +200,8 @@ class DatabaseManager:
                 host=host,
                 port=port,
             )
-            return PgConnWrapper(raw_conn)
+            _CACHED_PG_WRAPPER = PgConnWrapper(raw_conn)
+            return _CACHED_PG_WRAPPER
 
     @contextmanager
     def transaction(
@@ -205,7 +225,8 @@ class DatabaseManager:
                 pass
             raise
         finally:
-            if owns_conn:
+            # SQLite connections are closed, but persistent PostgreSQL pool connections are preserved
+            if owns_conn and not self.is_postgres:
                 conn.close()
 
 
