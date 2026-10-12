@@ -245,7 +245,7 @@ HTML_CONTENT = """<!DOCTYPE html>
       <!-- Logo & Brand with Mobile Menu Toggle Button -->
       <div class="flex items-center space-x-2.5">
         <!-- Mobile Sidebar Hamburger Toggle Button -->
-        <button id="btnToggleMobileSidebar" onclick="toggleMobileSidebar()" class="md:hidden p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition focus:outline-none flex items-center justify-center border border-slate-700/80 shadow-sm" title="Mở danh mục menu học tập">
+        <button id="btnToggleMobileSidebar" onclick="toggleMobileSidebar()" class="!hidden md:hidden p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition focus:outline-none flex items-center justify-center border border-slate-700/80 shadow-sm" title="Mở danh mục menu học tập">
           <i class="fa-solid fa-bars text-base"></i>
         </button>
 
@@ -302,7 +302,7 @@ HTML_CONTENT = """<!DOCTYPE html>
   <div class="flex-1 max-w-7xl w-full mx-auto flex flex-col md:flex-row">
     
     <!-- Left Navigation Sidebar (Responsive Mobile Drawer + Desktop Static) -->
-    <aside id="appSidebar" class="fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-slate-900 border-r border-slate-800 p-4 space-y-5 overflow-y-auto flex flex-col transform -translate-x-full transition-transform duration-300 ease-in-out shadow-2xl md:translate-x-0 md:static md:w-64 md:flex md:flex-col md:bg-slate-900/40 md:border-r md:border-slate-800/80 md:shadow-none shrink-0">
+    <aside id="appSidebar" class="!hidden fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-slate-900 border-r border-slate-800 p-4 space-y-5 overflow-y-auto flex flex-col transform -translate-x-full transition-transform duration-300 ease-in-out shadow-2xl md:translate-x-0 md:static md:w-64 md:flex md:flex-col md:bg-slate-900/40 md:border-r md:border-slate-800/80 md:shadow-none shrink-0">
       
       <!-- Mobile Drawer Header (close button & brand) -->
       <div class="flex items-center justify-between pb-3 border-b border-slate-800 md:hidden">
@@ -404,7 +404,7 @@ HTML_CONTENT = """<!DOCTYPE html>
           <button id="tabRegister" onclick="switchAuthTab('register')" class="flex-1 pb-3 text-xs font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition">Đăng Ký</button>
         </div>
 
-        <form id="authForm" onsubmit="handleAuthSubmit(event)" class="space-y-4">
+        <form id="authForm" onsubmit="event.preventDefault(); handleAuthSubmit(event); return false;" class="space-y-4">
           <div id="usernameGroup" class="hidden">
             <label class="block text-xs font-semibold text-slate-300 mb-1">Tên Người Dùng</label>
             <input type="text" id="authUsername" autocapitalize="none" autocorrect="off" spellcheck="false" class="w-full px-3.5 py-2.5 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-brand-500" placeholder="nguyenvana">
@@ -1959,6 +1959,18 @@ HTML_CONTENT = """<!DOCTYPE html>
       }
 
       currentView = viewName;
+      const isAuthView = viewName === 'auth';
+      const sidebarEl = document.getElementById('appSidebar');
+      const mobileToggleBtn = document.getElementById('btnToggleMobileSidebar');
+
+      if (isAuthView) {
+        if (sidebarEl) sidebarEl.classList.add('!hidden');
+        if (mobileToggleBtn) mobileToggleBtn.classList.add('!hidden');
+      } else {
+        if (sidebarEl) sidebarEl.classList.remove('!hidden');
+        if (mobileToggleBtn) mobileToggleBtn.classList.remove('!hidden');
+      }
+
       // Hide all views
       const views = [
         'auth', 'dashboard', 'paths', 'vocab', 'flashcards',
@@ -2012,15 +2024,29 @@ HTML_CONTENT = """<!DOCTYPE html>
     }
 
     async function handleAuthSubmit(e) {
-      e.preventDefault();
+      if (e && e.preventDefault) e.preventDefault();
       const isRegister = !document.getElementById('usernameGroup').classList.contains('hidden');
       const email = document.getElementById('authEmail').value.trim();
       const password = document.getElementById('authPassword').value;
       const username = document.getElementById('authUsername').value.trim();
       const errBox = document.getElementById('authError');
+      const submitBtn = document.getElementById('authSubmitBtn');
+
+      if (!email || !password) {
+        if (errBox) {
+          errBox.textContent = 'Vui lòng nhập đầy đủ email/tên đăng nhập và mật khẩu!';
+          errBox.classList.remove('hidden');
+        }
+        return false;
+      }
 
       try {
-        errBox.classList.add('hidden');
+        if (errBox) errBox.classList.add('hidden');
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Đang đăng nhập...';
+        }
+
         let res;
         if (isRegister) {
           res = await apiRequest('/api/auth/register', {
@@ -2036,52 +2062,39 @@ HTML_CONTENT = """<!DOCTYPE html>
 
         authToken = res.access_token;
         localStorage.setItem('vocabmaster_token', authToken);
-        await fetchUserProfile();
+        currentUser = res; // Instantly store currentUser from login token response
+
+        try {
+          await fetchUserProfile();
+        } catch (profileErr) {
+          console.warn("fetchUserProfile error (using login response):", profileErr);
+        }
+
+        updateAuthHeaderUI();
+        updateWorkspaceBadge();
         navigateTo('dashboard');
       } catch (err) {
-        errBox.textContent = err.message;
-        errBox.classList.remove('hidden');
+        if (errBox) {
+          errBox.textContent = err.message || 'Lỗi đăng nhập không xác định!';
+          errBox.classList.remove('hidden');
+        }
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = isRegister ? 'Tạo Tài Khoản Mới' : 'Đăng Nhập';
+        }
       }
+      return false;
     }
 
     async function quickDemoLogin() {
-      const demoEmail = 'learner@example.com';
-      const demoPassword = 'Password123!';
-      try {
-        const res = await apiRequest('/api/auth/login', {
-          method: 'POST',
-          body: JSON.stringify({ email: demoEmail, password: demoPassword })
-        });
-        authToken = res.access_token;
-        localStorage.setItem('vocabmaster_token', authToken);
-        await fetchUserProfile();
-        navigateTo('dashboard');
-      } catch (_) {
-        const reg = await apiRequest('/api/auth/register', {
-          method: 'POST',
-          body: JSON.stringify({ username: 'learner', email: demoEmail, password: demoPassword })
-        });
-        authToken = reg.access_token;
-        localStorage.setItem('vocabmaster_token', authToken);
-        await fetchUserProfile();
-
-        // Seed initial deck & words
-        const deck = await apiRequest('/api/decks', {
-          method: 'POST',
-          body: JSON.stringify({ name: 'Tiếng Anh Công Nghệ (Tech Vocab)', target_language: 'en', description: 'Từ vựng cốt lõi' })
-        });
-        const sampleCSV = "term,definition,ipa,part_of_speech\\niteration,sự lặp lại một chu trình,/ˌɪt.əˈreɪ.ʃən/,noun\\nconcurrency,tính năng xử lý đồng thời,/kənˈkʌr.ən.si/,noun\\nresilience,khả năng phục hồi vượt khó,/rɪˈzɪl.jəns/,noun\\n↳ Root word: resile,phục hồi về trạng thái ban đầu,,verb";
-        const blob = new Blob([sampleCSV], { type: 'text/csv' });
-        const formData = new FormData();
-        formData.append('file', blob, 'starter.csv');
-        await apiRequest(`/api/decks/${deck.id}/import`, {
-          method: 'POST',
-          body: formData,
-          isFormData: true
-        });
-
-        navigateTo('dashboard');
+      document.getElementById('authEmail').value = 'learner@example.com';
+      document.getElementById('authPassword').value = 'Password123!';
+      const userGroup = document.getElementById('usernameGroup');
+      if (userGroup && !userGroup.classList.contains('hidden')) {
+        switchAuthTab('login');
       }
+      await handleAuthSubmit({ preventDefault: () => {} });
     }
 
     async function fillAndLoginAdmin() {
@@ -2092,8 +2105,7 @@ HTML_CONTENT = """<!DOCTYPE html>
       if (userGroup && !userGroup.classList.contains('hidden')) {
         switchAuthTab('login');
       }
-      const event = new Event('submit', { cancelable: true });
-      document.getElementById('authForm').dispatchEvent(event);
+      await handleAuthSubmit({ preventDefault: () => {} });
     }
 
     function togglePasswordVisibility() {
