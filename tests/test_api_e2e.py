@@ -294,3 +294,47 @@ def test_api_manual_vocab_creation_and_language_isolation(client, auth_headers):
     assert lapsed_res.status_code == 200
     assert isinstance(lapsed_res.json(), list)
 
+
+def test_ui_mobile_sidebar_and_toggle_button(client):
+    """Verify that root UI delivers the mobile sidebar drawer and toggle button with all required sections."""
+    res = client.get("/")
+    assert res.status_code == 200
+    html = res.text
+
+    # Mobile hamburger toggle button & backdrop
+    assert 'id="btnToggleMobileSidebar"' in html
+    assert 'onclick="toggleMobileSidebar()"' in html
+    assert 'id="sidebarBackdrop"' in html
+    assert 'onclick="closeMobileSidebar()"' in html
+
+    # Sidebar element & mobile classes
+    assert 'id="appSidebar"' in html
+    assert "-translate-x-full" in html
+    assert "md:translate-x-0" in html
+
+    # Navigation sections required by user
+    assert "Học Tập &amp; Ôn Luyện" in html or "Học Tập & Ôn Luyện" in html
+    assert "Tổng Quan" in html
+    assert "Lộ Trình Học" in html
+    assert "Thư Viện Từ Vựng" in html
+    assert "Thẻ Ghi Nhớ" in html
+
+    assert "Phiên Học Hàng Ngày" in html
+    assert "Học 20 Phút Mỗi Ngày" in html
+    assert "Trung Tâm Ôn Tập" in html
+    assert "Luyện Viết &amp; Nói" in html or "Luyện Viết & Nói" in html
+
+    assert "Quản Lý &amp; Cài Đặt" in html or "Quản Lý & Cài Đặt" in html
+    assert "Nhập Từ Vựng" in html
+    assert "Tiến Độ &amp; Chuỗi Học" in html or "Tiến Độ & Chuỗi Học" in html
+    assert "Cài Đặt" in html
+
+    # Streak widget
+    assert "ngày liên tiếp" in html
+    assert "Duy trì thói quen học" in html
+    assert "Hoạt động" in html
+
+    # JS toggle controls
+    assert "function toggleMobileSidebar()" in html
+    assert "function closeMobileSidebar()" in html
+

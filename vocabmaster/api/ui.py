@@ -242,14 +242,21 @@ HTML_CONTENT = """<!DOCTYPE html>
   <!-- Top Navigation Header -->
   <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-40">
     <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-      <!-- Logo & Brand -->
-      <div class="flex items-center space-x-3 cursor-pointer" onclick="navigateTo('dashboard')">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white shadow-lg shadow-brand-500/20">
-          <i class="fa-solid fa-graduation-cap text-lg"></i>
-        </div>
-        <div>
-          <span class="text-xl font-black tracking-tight bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 bg-clip-text text-transparent">VocabMaster</span>
-          <span class="text-[10px] px-2 py-0.5 ml-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold uppercase tracking-wider">SM-2+ v2.0</span>
+      <!-- Logo & Brand with Mobile Menu Toggle Button -->
+      <div class="flex items-center space-x-2.5">
+        <!-- Mobile Sidebar Hamburger Toggle Button -->
+        <button id="btnToggleMobileSidebar" onclick="toggleMobileSidebar()" class="md:hidden p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition focus:outline-none flex items-center justify-center border border-slate-700/80 shadow-sm" title="Mở danh mục menu học tập">
+          <i class="fa-solid fa-bars text-base"></i>
+        </button>
+
+        <div class="flex items-center space-x-2.5 cursor-pointer" onclick="navigateTo('dashboard')">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white shadow-lg shadow-brand-500/20">
+            <i class="fa-solid fa-graduation-cap text-lg"></i>
+          </div>
+          <div>
+            <span class="text-xl font-black tracking-tight bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 bg-clip-text text-transparent">VocabMaster</span>
+            <span class="text-[10px] px-2 py-0.5 ml-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold uppercase tracking-wider">SM-2+ v2.0</span>
+          </div>
         </div>
       </div>
 
@@ -288,11 +295,40 @@ HTML_CONTENT = """<!DOCTYPE html>
     </div>
   </header>
 
+  <!-- Mobile Sidebar Backdrop Overlay -->
+  <div id="sidebarBackdrop" onclick="closeMobileSidebar()" class="fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-sm hidden md:hidden transition-opacity duration-300"></div>
+
   <!-- App Body Layout (Sidebar + Main View) -->
   <div class="flex-1 max-w-7xl w-full mx-auto flex flex-col md:flex-row">
     
-    <!-- Left Navigation Sidebar -->
-    <aside id="appSidebar" class="hidden md:flex w-64 flex-col border-r border-slate-800/80 bg-slate-900/40 p-4 space-y-6 shrink-0">
+    <!-- Left Navigation Sidebar (Responsive Mobile Drawer + Desktop Static) -->
+    <aside id="appSidebar" class="fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-slate-900 border-r border-slate-800 p-4 space-y-5 overflow-y-auto flex flex-col transform -translate-x-full transition-transform duration-300 ease-in-out shadow-2xl md:translate-x-0 md:static md:w-64 md:flex md:flex-col md:bg-slate-900/40 md:border-r md:border-slate-800/80 md:shadow-none shrink-0">
+      
+      <!-- Mobile Drawer Header (close button & brand) -->
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 md:hidden">
+        <div class="flex items-center space-x-2">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white shadow-md">
+            <i class="fa-solid fa-graduation-cap text-sm"></i>
+          </div>
+          <div>
+            <span class="text-sm font-black tracking-tight text-white">VocabMaster</span>
+            <span class="text-[9px] px-1.5 py-0.5 ml-1 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-700 font-bold uppercase">Menu</span>
+          </div>
+        </div>
+        <button onclick="closeMobileSidebar()" class="w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center border border-slate-700/60 transition" title="Đóng menu">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Mobile Quick Language Switcher inside Drawer -->
+      <div class="md:hidden pb-3 border-b border-slate-800 space-y-1.5">
+        <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-1">Chế Độ Ngôn Ngữ</div>
+        <select id="mobileLangSelect" onchange="switchLearningLanguage(this.value); closeMobileSidebar();" class="w-full bg-slate-800 border border-slate-700 text-xs text-slate-200 font-medium rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500 transition">
+          <option value="en">🇬🇧 Tiếng Anh (English Mode)</option>
+          <option value="zh">🇨🇳 Tiếng Trung (Chinese Mode)</option>
+        </select>
+      </div>
+
       <div class="space-y-1">
         <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-3 mb-2">Học Tập & Ôn Luyện</div>
         <button onclick="navigateTo('dashboard')" id="nav-dashboard" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-emerald-400 bg-emerald-500/10 transition">
@@ -1860,8 +1896,50 @@ HTML_CONTENT = """<!DOCTYPE html>
       speakText(currentCard.term, currentCard.language || currentLearningLanguage);
     }
 
+    // Responsive Mobile Sidebar Drawer Controls
+    function toggleMobileSidebar() {
+      const sidebar = document.getElementById('appSidebar');
+      if (!sidebar) return;
+      if (sidebar.classList.contains('-translate-x-full')) {
+        openMobileSidebar();
+      } else {
+        closeMobileSidebar();
+      }
+    }
+
+    function openMobileSidebar() {
+      const sidebar = document.getElementById('appSidebar');
+      const backdrop = document.getElementById('sidebarBackdrop');
+      if (sidebar) {
+        sidebar.classList.remove('-translate-x-full');
+      }
+      if (backdrop) {
+        backdrop.classList.remove('hidden');
+      }
+      document.body.classList.add('overflow-hidden', 'md:overflow-auto');
+    }
+
+    function closeMobileSidebar() {
+      const sidebar = document.getElementById('appSidebar');
+      const backdrop = document.getElementById('sidebarBackdrop');
+      if (sidebar) {
+        sidebar.classList.add('-translate-x-full');
+      }
+      if (backdrop) {
+        backdrop.classList.add('hidden');
+      }
+      document.body.classList.remove('overflow-hidden', 'md:overflow-auto');
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeMobileSidebar();
+      }
+    });
+
     // Navigation Switcher
     function navigateTo(viewName) {
+      closeMobileSidebar();
       if (!authToken && viewName !== 'auth') {
         return navigateTo('auth');
       }
@@ -2041,7 +2119,10 @@ HTML_CONTENT = """<!DOCTYPE html>
       try {
         currentUser = await apiRequest('/api/auth/me');
         currentLearningLanguage = currentUser.active_learning_language || currentUser.learning_language || 'en';
-        document.getElementById('headerLangSelect').value = currentLearningLanguage;
+        const hSelect = document.getElementById('headerLangSelect');
+        if (hSelect) hSelect.value = currentLearningLanguage;
+        const mSelect = document.getElementById('mobileLangSelect');
+        if (mSelect) mSelect.value = currentLearningLanguage;
         updateWorkspaceBadge();
         updateAuthHeaderUI();
         if (!currentUser.has_selected_language) {
@@ -2064,7 +2145,10 @@ HTML_CONTENT = """<!DOCTYPE html>
           currentUser.active_learning_language = lang;
         }
         closeModal('modalLanguageOnboarding');
-        document.getElementById('headerLangSelect').value = lang;
+        const hSelect = document.getElementById('headerLangSelect');
+        if (hSelect) hSelect.value = lang;
+        const mSelect = document.getElementById('mobileLangSelect');
+        if (mSelect) mSelect.value = lang;
         updateWorkspaceBadge();
         navigateTo('dashboard');
       } catch (err) {
@@ -2074,7 +2158,10 @@ HTML_CONTENT = """<!DOCTYPE html>
 
     async function switchLearningLanguage(newLang) {
       currentLearningLanguage = newLang;
-      document.getElementById('headerLangSelect').value = newLang;
+      const hSelect = document.getElementById('headerLangSelect');
+      if (hSelect) hSelect.value = newLang;
+      const mSelect = document.getElementById('mobileLangSelect');
+      if (mSelect) mSelect.value = newLang;
       updateWorkspaceBadge();
       if (authToken) {
         try {
@@ -2505,6 +2592,7 @@ HTML_CONTENT = """<!DOCTYPE html>
 
     // STUDY SESSION ENGINE (Daily 20-min & Quick Reviews)
     async function startDailyStructuredSession(unlimited = false) {
+      closeMobileSidebar();
       try {
         const res = await apiRequest('/api/sessions/start', {
           method: 'POST',
