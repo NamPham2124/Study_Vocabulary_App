@@ -1230,6 +1230,7 @@ def get_active_or_paused_session(
     deck_id: Optional[str] = None,
     path_id: Optional[str] = None,
     learning_language: Optional[str] = None,
+    session_type: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
     clauses = ["user_id = ?", "status IN ('ACTIVE', 'PAUSED')"]
     params: List[Any] = [user_id]
@@ -1242,6 +1243,9 @@ def get_active_or_paused_session(
     if learning_language:
         clauses.append("(learning_language = ? OR learning_language IS NULL)")
         params.append(learning_language)
+    if session_type:
+        clauses.append("(session_type = ? OR session_type IS NULL)")
+        params.append(session_type)
 
     sql = f"""
     SELECT * FROM learning_sessions

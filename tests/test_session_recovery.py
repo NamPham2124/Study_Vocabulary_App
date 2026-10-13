@@ -116,3 +116,54 @@ def test_failed_card_requeuing_in_session(temp_db_path, test_user):
 
         final_res = session_manager.submit_card_answer(conn, session_id, test_user["id"], rating=4)
         assert final_res["is_completed"] is True
+
+
+def test_session_recovery_skips_deleted_cards_in_queue(temp_db_path, test_user):
+    with get_db(temp_db_path) as conn:
+        setup_sample_deck_and_cards(conn, test_user["id"], count=3)
+        init_res = session_manager.start_or_resume_session(conn, test_user["id"], "deck-sess-1")
+        session_id = init_res["session"]["id"]
+        queue = init_res["session"]["card_ids_queue"]
+        assert len(queue) == 3
+
+        # Simulate deleting card 0 from database
+        conn.execute("DELETE FROM srs_cards WHERE id = ?", (queue[0],))
+
+        # get_current_card should cleanly skip deleted card 0 and return card 1!
+        card = session_manager.get_current_card(conn, session_id, test_user["id"])
+        assert card is not None
+        assert card["term"] == "word2"
+        assert card["current_index"] == 1
+
+        # Now simulate deleting all remaining cards in queue
+        conn.execute("DELETE FROM srs_cards WHERE id IN (?, ?)", (queue[1], queue[2]))
+
+        # get_current_card should auto-complete session and return None
+        card_none = session_manager.get_current_card(conn, session_id, test_user["id"])
+        assert card_none is None
+        sess = repository.get_session_by_id(conn, session_id, test_user["id"])
+        assert sess["status"] == "COMPLETED"
+
+
+def test_start_session_unlimited_allows_continued_learning(temp_db_path, test_user):
+    with get_db(temp_db_path) as conn:
+        setup_sample_deck_and_cards(conn, test_user["id"], count=2)
+        # Start and complete first session
+        s1 = session_manager.start_or_resume_session(conn, test_user["id"], "deck-sess-1")
+        sid = s1["session"]["id"]
+        session_manager.submit_card_answer(conn, sid, test_user["id"], rating=5)
+        session_manager.submit_card_answer(conn, sid, test_user["id"], rating=5)
+
+        # Now all cards are reviewed and none are due
+        due = repository.get_due_review_cards(conn, test_user["id"])
+        assert len(due) == 0
+
+        # Starting bounded session should have 0 cards (daily limit reached)
+        s_bounded = session_manager.start_or_resume_session(conn, test_user["id"], "deck-sess-1", unlimited=False)
+        assert s_bounded["session"]["total_cards"] == 0
+
+        # BUT starting unlimited session pulls reinforcement cards so user can keep studying!
+        s_unlimited = session_manager.start_or_resume_session(conn, test_user["id"], "deck-sess-1", unlimited=True)
+        assert s_unlimited["session"]["total_cards"] > 0
+        assert s_unlimited["current_card"] is not None
+

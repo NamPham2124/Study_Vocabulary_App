@@ -458,6 +458,12 @@ HTML_CONTENT = """<!DOCTYPE html>
             <button onclick="startDailyStructuredSession(true)" title="Ôn tập tự do không bị giới hạn số thẻ mỗi ngày" class="px-3.5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-teal-600/20 transition flex items-center gap-1.5">
               <i class="fa-solid fa-infinity"></i> Ôn Tập Không Giới Hạn
             </button>
+            <button onclick="startLapsedRelearnSession()" title="Ôn tập lại các từ chưa thuộc hoặc hay quên theo thuật toán lặp lại ngắt quãng" class="px-3.5 py-2.5 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow">
+              <i class="fa-solid fa-rotate-left text-rose-400"></i> Ôn Từ Chưa Thuộc
+            </button>
+            <button onclick="navigateTo('reviews'); switchReviewSubTab('exercises');" title="Mở phòng làm quiz trắc nghiệm đảo đề giấu chữ" class="px-3.5 py-2.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow">
+              <i class="fa-solid fa-shuffle text-indigo-400"></i> Quiz Đảo Đề
+            </button>
             <button onclick="seedSampleTemplateDeck()" title="Tạo 1 bộ từ vựng mẫu có sẵn từ vựng tiêu chuẩn" class="px-3.5 py-2.5 bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow">
               <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i> Thêm Bộ Thẻ Mẫu
             </button>
@@ -917,7 +923,7 @@ HTML_CONTENT = """<!DOCTYPE html>
 
               <!-- Field 3: Meaning in Vietnamese (Mode 1 & Mode 2) -->
               <div id="multiExMeaningInputContainer" class="space-y-1.5">
-                <label class="block text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                <label id="multiExMeaningInputLabel" class="block text-xs font-bold text-slate-200 flex items-center gap-1.5">
                   <i class="fa-solid fa-language text-amber-400"></i> Ghi nghĩa tiếng Việt của từ:
                 </label>
                 <div class="relative">
@@ -1772,9 +1778,20 @@ HTML_CONTENT = """<!DOCTYPE html>
         </div>
       </div>
 
-      <button onclick="closeModal('modalSessionSummary'); navigateTo('dashboard')" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-emerald-600/30">
-        Quay Về Trang Chủ
-      </button>
+      <div class="space-y-2 pt-2">
+        <button onclick="closeModal('modalSessionSummary'); startDailyStructuredSession(true);" class="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2">
+          <i class="fa-solid fa-play"></i> Tiếp Tục Học Thêm Lượt Mới (Tự Do)
+        </button>
+        <button onclick="relearnFinishedSession();" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-teal-300 border border-slate-700 font-bold rounded-xl text-xs transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-rotate-left"></i> Học Lại Các Từ Vừa Học
+        </button>
+        <button onclick="startQuizWithCurrentSessionCards();" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-bold rounded-xl text-xs transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-shuffle"></i> Làm Quiz Đảo Đề Với Các Từ Này
+        </button>
+        <button onclick="closeModal('modalSessionSummary'); navigateTo('dashboard')" class="w-full py-2 text-slate-400 hover:text-white font-medium text-xs transition">
+          Quay Về Trang Chủ
+        </button>
+      </div>
     </div>
   </div>
 
@@ -2657,15 +2674,23 @@ HTML_CONTENT = """<!DOCTYPE html>
         currentCard = res.current_card;
         if (!currentCard || res.session.total_cards === 0) {
           if (res.session.status === 'EMPTY') {
-            alert('Kho từ vựng của bạn đang trống! Hãy thêm từ mới hoặc tải lên tệp CSV/Excel trong phần "Nhập Dữ Liệu" để bắt đầu học.');
+            if (confirm('Kho từ vựng của bạn đang trống! Bạn có muốn thêm ngay 1 bộ thẻ mẫu tiêu chuẩn để bắt đầu học không?')) {
+              await seedSampleTemplateDeck();
+              startDailyStructuredSession(false);
+            }
             return;
           }
           if (!unlimited) {
-            if (confirm('Bạn đã hoàn thành toàn bộ mục tiêu thẻ học hôm nay theo giới hạn hàng ngày! Bạn có muốn học tiếp ở chế độ Ôn Tập Không Giới Hạn (Unlimited Mode) để củng cố thêm từ vựng không?')) {
+            if (confirm('Bạn đã hoàn thành mục tiêu số thẻ hôm nay theo kế hoạch hàng ngày!\\n\\nBạn có muốn tiếp tục học thêm từ và củng cố kiến thức ở chế độ Ôn Tập Tự Do (Không Giới Hạn) không?')) {
               startDailyStructuredSession(true);
             }
           } else {
-            alert('Hiện tại tất cả từ vựng đều đang ở chu kỳ nhớ tốt. Bạn có thể làm quiz trắc nghiệm đảo đề tại Trung Tâm Ôn Tập.');
+            if (confirm('Bạn đã xem qua tất cả thẻ từ vựng trong phiên này.\\n\\nBạn có muốn HỌC LẠI các từ vựng này ngay lập tức theo phương pháp lặp lại ngắt quãng để củng cố trí nhớ không?')) {
+              startLapsedRelearnSession();
+            } else {
+              navigateTo('reviews');
+              switchReviewSubTab('exercises');
+            }
           }
           return;
         }
@@ -2679,10 +2704,16 @@ HTML_CONTENT = """<!DOCTYPE html>
       try {
         const res = await apiRequest('/api/sessions/start', {
           method: 'POST',
-          body: JSON.stringify({ deck_id: deckId, session_type: 'deck_study' })
+          body: JSON.stringify({ deck_id: deckId, session_type: 'deck_study', unlimited: true })
         });
         currentSession = res.session;
         currentCard = res.current_card;
+        if (!currentCard || res.session.total_cards === 0) {
+          if (confirm('Bộ thẻ này hiện chưa có từ vựng nào cần ôn tập gấp. Bạn có muốn học lại toàn bộ từ trong bộ thẻ này không?')) {
+            startLapsedRelearnSession();
+          }
+          return;
+        }
         openActiveSessionUI();
       } catch (err) {
         alert(err.message);
@@ -2693,7 +2724,7 @@ HTML_CONTENT = """<!DOCTYPE html>
       try {
         const res = await apiRequest('/api/sessions/start', {
           method: 'POST',
-          body: JSON.stringify({ path_id: pathId, session_type: 'daily_20min' })
+          body: JSON.stringify({ path_id: pathId, session_type: 'daily_20min', unlimited: true })
         });
         currentSession = res.session;
         currentCard = res.current_card;
@@ -2707,10 +2738,16 @@ HTML_CONTENT = """<!DOCTYPE html>
       try {
         const res = await apiRequest('/api/sessions/start', {
           method: 'POST',
-          body: JSON.stringify({ session_type: 'review_only', learning_language: currentLearningLanguage })
+          body: JSON.stringify({ session_type: 'review_only', learning_language: currentLearningLanguage, unlimited: true })
         });
         currentSession = res.session;
         currentCard = res.current_card;
+        if (!currentCard || res.session.total_cards === 0) {
+          if (confirm('Hiện tại không có thẻ nào đến hạn gấp theo thuật toán SRS. Bạn có muốn ôn tập củng cố các từ vựng đã học không?')) {
+            startDailyStructuredSession(true);
+          }
+          return;
+        }
         openActiveSessionUI();
       } catch (err) {
         alert(err.message);
@@ -2860,6 +2897,18 @@ HTML_CONTENT = """<!DOCTYPE html>
         await apiRequest(`/api/sessions/${currentSession.id}/pause`, { method: 'POST' });
       }
       navigateTo('dashboard');
+    }
+
+    async function relearnFinishedSession() {
+      closeModal('modalSessionSummary');
+      await startLapsedRelearnSession();
+    }
+
+    async function startQuizWithCurrentSessionCards() {
+      closeModal('modalSessionSummary');
+      navigateTo('reviews');
+      switchReviewSubTab('exercises');
+      initMultiExSession(true);
     }
 
     // Keyboard Shortcuts (Space to flip, 0-5 to rate)

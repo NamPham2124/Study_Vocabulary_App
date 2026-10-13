@@ -1215,6 +1215,24 @@ def create_app(db_path: Optional[str] = None) -> FastAPI:
                 "longest_streak": streak["longest_streak"],
             }
 
+    @app.get("/api/progress")
+    def get_user_progress(
+        language: Optional[str] = Query(None),
+        user: Dict[str, Any] = Depends(get_current_user),
+    ):
+        with get_db(db_path) as conn:
+            lang = language or user.get("active_learning_language", "en")
+            dist = repository.get_srs_distribution(conn, user["id"], learning_language=lang)
+            streak = repository.get_user_streak(conn, user["id"], learning_language=lang)
+            learned_cards = (dist.get("box_30_plus_days", 0) + dist.get("box_14_days", 0) + dist.get("box_7_days", 0))
+            return {
+                "total_cards": dist.get("total_cards", 0),
+                "learned_cards": learned_cards,
+                "current_streak": streak.get("current_streak", 0),
+                "longest_streak": streak.get("longest_streak", 0),
+                "distribution": dist,
+            }
+
     @app.get("/api/progress/streak")
     def streak_info(
         language: Optional[str] = Query(None),

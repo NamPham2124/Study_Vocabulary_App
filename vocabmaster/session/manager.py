@@ -35,29 +35,45 @@ def start_or_resume_session(
     # Determine resolved language
     resolved_lang = learning_language
     if not resolved_lang and deck:
-        resolved_lang = deck.get("language")
+        resolved_lang = deck.get("target_language") or deck.get("language")
     if not resolved_lang and user:
-        resolved_lang = user.get("preferred_language", "en")
+        resolved_lang = user.get("active_learning_language") or user.get("preferred_language", "en")
     if not resolved_lang:
         resolved_lang = "en"
 
-    # 1. Check for recoverable existing active or paused session matching language and context
+    # 1. Check for recoverable existing active or paused session matching language, context and session_type
     existing = repository.get_active_or_paused_session(
-        conn, user_id, deck_id=deck_id, path_id=path_id, learning_language=resolved_lang
+        conn, user_id, deck_id=deck_id, path_id=path_id, learning_language=resolved_lang, session_type=session_type
     )
     if existing:
-        if existing["status"] == "PAUSED":
-            existing = repository.update_session(
-                conn, existing["id"], user_id, status="ACTIVE"
-            )
         current_card = get_current_card(conn, existing["id"], user_id)
-        return {
-            "session": existing,
-            "recovered": True,
-            "current_card": current_card,
-        }
+        if current_card is None:
+            # Existing session has exhausted all valid cards or is corrupted; complete it and build fresh session
+            repository.update_session(conn, existing["id"], user_id, status="COMPLETED")
+            existing = None
+        elif unlimited and existing.get("total_cards", 0) <= (existing.get("completed_cards", 0) or 0):
+            # Unlimited requested and previous session is done; complete it and build fresh session
+            repository.update_session(conn, existing["id"], user_id, status="COMPLETED")
+            existing = None
+            current_card = None
+        else:
+            if existing["status"] == "PAUSED":
+                existing = repository.update_session(
+                    conn, existing["id"], user_id, status="ACTIVE"
+                )
+            return {
+                "session": existing,
+                "recovered": True,
+                "current_card": current_card,
+            }
 
     # 2. Build structured queues with bounded limits
+    progress = repository.get_daily_study_progress(
+        conn, user_id, deck_id=deck_id, learning_language=resolved_lang
+    )
+    already_new = progress["new_cards_studied_today"]
+    already_rev = progress["review_cards_studied_today"]
+
     if unlimited:
         limit_new = new_card_limit or 1000
         limit_rev = review_limit or 1000
@@ -73,13 +89,6 @@ def start_or_resume_session(
             if review_limit is not None
             else (deck.get("max_reviews_per_day") if deck and deck.get("max_reviews_per_day") is not None else (user.get("daily_review_target", 50) if user else 50))
         )
-
-        # Subtract cards already completed today
-        progress = repository.get_daily_study_progress(
-            conn, user_id, deck_id=deck_id, learning_language=resolved_lang
-        )
-        already_new = progress["new_cards_studied_today"]
-        already_rev = progress["review_cards_studied_today"]
 
         limit_new = max(0, target_new - already_new)
         limit_rev = max(0, target_rev - already_rev)
@@ -141,12 +150,12 @@ def start_or_resume_session(
             initial_phase = "completed"
 
     # If the primary queue is empty, check if we should pull reinforcement cards
-    # (i.e. user is in unlimited mode or has not studied any cards yet today)
+    # (i.e. user is in unlimited mode, hasn't studied today, or in explicit srs_relearn mode)
     if not primary_queue:
-        should_reinforce = unlimited or (already_new == 0 and already_rev == 0)
+        should_reinforce = unlimited or (already_new == 0 and already_rev == 0) or session_type == "srs_relearn"
         if should_reinforce:
             reinforce_cards = repository.get_reinforcement_cards(
-                conn, user_id, deck_id=deck_id, path_id=path_id, learning_language=resolved_lang, limit=min(limit_rev or 20, 30)
+                conn, user_id, deck_id=deck_id, path_id=path_id, learning_language=resolved_lang, limit=min(limit_rev or 20, 50)
             )
             if reinforce_cards:
                 review_ids = [c["id"] for c in reinforce_cards]
@@ -222,47 +231,49 @@ def get_current_card(
     queue = session.get("card_ids_queue", [])
     idx = session.get("current_index", 0)
 
-    if idx >= len(queue):
-        return None
+    # Robust iteration: skip any deleted/missing cards in queue
+    while idx < len(queue):
+        card_id = queue[idx]
+        srs_card = repository.get_srs_card_by_id(conn, card_id, user_id)
+        if srs_card:
+            vocab_item = repository.get_vocab_item_by_id(conn, srs_card["vocab_id"], user_id)
+            if vocab_item:
+                if idx != session.get("current_index", 0):
+                    repository.update_session(conn, session_id, user_id, current_index=idx)
+                return {
+                    "session_id": session_id,
+                    "current_index": idx,
+                    "total_cards": len(queue),
+                    "current_phase": session.get("current_phase", "review"),
+                    "card_id": srs_card["id"],
+                    "vocab_id": vocab_item["id"],
+                    "term": vocab_item["term"],
+                    "definition": vocab_item["definition"],
+                    "ipa": vocab_item["ipa"],
+                    "part_of_speech": vocab_item["part_of_speech"],
+                    "examples": vocab_item["examples"],
+                    "synonyms": vocab_item["synonyms"],
+                    "antonyms": vocab_item["antonyms"],
+                    "notes": vocab_item["notes"],
+                    "tags": vocab_item["tags"],
+                    "root_word": vocab_item.get("root_word", ""),
+                    "vietnamese_meanings": vocab_item.get("vietnamese_meanings", []),
+                    "english_definitions": vocab_item.get("english_definitions", []),
+                    "mnemonics": vocab_item.get("mnemonics", ""),
+                    "audio_url": vocab_item.get("audio_url", ""),
+                    "is_favorite": vocab_item.get("is_favorite", False),
+                    "language": vocab_item["language"],
+                    "language_specific_fields": vocab_item["language_specific_fields"],
+                    "state": srs_card["state"],
+                    "repetition_count": srs_card["repetition_count"],
+                    "ease_factor": srs_card["ease_factor"],
+                    "interval_days": srs_card["interval_days"],
+                }
+        idx += 1
 
-    card_id = queue[idx]
-    srs_card = repository.get_srs_card_by_id(conn, card_id, user_id)
-    if not srs_card:
-        return None
-
-    vocab_item = repository.get_vocab_item_by_id(conn, srs_card["vocab_id"], user_id)
-    if not vocab_item:
-        return None
-
-    return {
-        "session_id": session_id,
-        "current_index": idx,
-        "total_cards": len(queue),
-        "current_phase": session.get("current_phase", "review"),
-        "card_id": srs_card["id"],
-        "vocab_id": vocab_item["id"],
-        "term": vocab_item["term"],
-        "definition": vocab_item["definition"],
-        "ipa": vocab_item["ipa"],
-        "part_of_speech": vocab_item["part_of_speech"],
-        "examples": vocab_item["examples"],
-        "synonyms": vocab_item["synonyms"],
-        "antonyms": vocab_item["antonyms"],
-        "notes": vocab_item["notes"],
-        "tags": vocab_item["tags"],
-        "root_word": vocab_item.get("root_word", ""),
-        "vietnamese_meanings": vocab_item.get("vietnamese_meanings", []),
-        "english_definitions": vocab_item.get("english_definitions", []),
-        "mnemonics": vocab_item.get("mnemonics", ""),
-        "audio_url": vocab_item.get("audio_url", ""),
-        "is_favorite": vocab_item.get("is_favorite", False),
-        "language": vocab_item["language"],
-        "language_specific_fields": vocab_item["language_specific_fields"],
-        "state": srs_card["state"],
-        "repetition_count": srs_card["repetition_count"],
-        "ease_factor": srs_card["ease_factor"],
-        "interval_days": srs_card["interval_days"],
-    }
+    # If all remaining cards in queue are completed or missing, mark session completed
+    repository.update_session(conn, session_id, user_id, status="COMPLETED", current_index=len(queue))
+    return None
 
 
 def advance_phase(
