@@ -105,6 +105,45 @@ HTML_CONTENT = """<!DOCTYPE html>
       box-shadow: 4px 0 20px -2px rgba(15, 23, 42, 0.02) !important;
     }
 
+    /* Sidebar Collapsed Styles (Desktop & Mobile) */
+    @media (min-width: 768px) {
+      aside#appSidebar {
+        transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1), padding 0.28s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      }
+      aside#appSidebar.sidebar-collapsed {
+        width: 4.5rem !important; /* 72px */
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+      }
+      aside#appSidebar.sidebar-collapsed .sidebar-text,
+      aside#appSidebar.sidebar-collapsed .sidebar-section-title,
+      aside#appSidebar.sidebar-collapsed .sidebar-streak-info,
+      aside#appSidebar.sidebar-collapsed .sidebar-header-brand {
+        display: none !important;
+      }
+      aside#appSidebar.sidebar-collapsed #btnSidebarCollapse {
+        width: 100% !important;
+        justify-content: center !important;
+      }
+      aside#appSidebar.sidebar-collapsed #btnSidebarCollapseIcon {
+        transform: rotate(180deg) !important;
+      }
+      aside#appSidebar.sidebar-collapsed .nav-item {
+        justify-content: center !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        gap: 0 !important;
+      }
+      aside#appSidebar.sidebar-collapsed .nav-item i {
+        margin: 0 !important;
+        font-size: 1.15rem !important;
+      }
+      aside#appSidebar.sidebar-collapsed .sidebar-streak-widget {
+        justify-content: center !important;
+        padding: 0.5rem 0.25rem !important;
+      }
+    }
+
     /* Glassmorphism Cards & Panels from Burnout Web */
     .bg-slate-900,
     .bg-slate-900\/90,
@@ -244,9 +283,9 @@ HTML_CONTENT = """<!DOCTYPE html>
     <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
       <!-- Logo & Brand with Mobile Menu Toggle Button -->
       <div class="flex items-center space-x-2.5">
-        <!-- Mobile Sidebar Hamburger Toggle Button -->
-        <button id="btnToggleMobileSidebar" onclick="toggleMobileSidebar()" class="!hidden md:hidden p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition focus:outline-none flex items-center justify-center border border-slate-700/80 shadow-sm" title="Mở danh mục menu học tập">
-          <i class="fa-solid fa-bars text-base"></i>
+        <!-- Sidebar Toggle Button (Universal for Mobile Drawer & Desktop Collapse) -->
+        <button id="btnToggleMobileSidebar" onclick="toggleMobileSidebar()" class="!hidden p-2 sm:p-2.5 rounded-xl text-slate-700 hover:text-emerald-700 hover:bg-slate-100 bg-white border border-slate-200/90 transition focus:outline-none flex items-center justify-center shadow-sm cursor-pointer" title="Thu gọn / Mở rộng thanh bên (Ctrl+B)">
+          <i class="fa-solid fa-bars text-sm"></i>
         </button>
 
         <div class="flex items-center space-x-2.5 cursor-pointer" onclick="navigateTo('dashboard')">
@@ -301,22 +340,30 @@ HTML_CONTENT = """<!DOCTYPE html>
   <!-- App Body Layout (Sidebar + Main View) -->
   <div class="flex-1 max-w-7xl w-full mx-auto flex flex-col md:flex-row">
     
-    <!-- Left Navigation Sidebar (Responsive Mobile Drawer + Desktop Static) -->
-    <aside id="appSidebar" class="!hidden fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-slate-900 border-r border-slate-800 p-4 space-y-5 overflow-y-auto flex flex-col transform -translate-x-full transition-transform duration-300 ease-in-out shadow-2xl md:translate-x-0 md:static md:w-64 md:flex md:flex-col md:bg-slate-900/40 md:border-r md:border-slate-800/80 md:shadow-none shrink-0">
+    <!-- Left Navigation Sidebar (Responsive Mobile Drawer + Desktop Collapsible) -->
+    <aside id="appSidebar" class="!hidden fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-slate-900 border-r border-slate-800 p-4 space-y-4 overflow-y-auto flex flex-col transform -translate-x-full transition-all duration-300 ease-in-out shadow-2xl md:translate-x-0 md:static md:w-64 md:flex md:flex-col md:bg-slate-900/40 md:border-r md:border-slate-800/80 md:shadow-none shrink-0">
       
-      <!-- Mobile Drawer Header (close button & brand) -->
-      <div class="flex items-center justify-between pb-3 border-b border-slate-800 md:hidden">
-        <div class="flex items-center space-x-2">
-          <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white shadow-md">
-            <i class="fa-solid fa-graduation-cap text-sm"></i>
+      <!-- Sidebar Header (Mobile Drawer Close & Desktop Collapse/Expand) -->
+      <div class="flex items-center justify-between pb-3 border-b border-slate-200/80">
+        <div class="flex items-center space-x-2 sidebar-header-brand">
+          <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white shadow-md shrink-0">
+            <i class="fa-solid fa-graduation-cap text-xs"></i>
           </div>
-          <div>
-            <span class="text-sm font-black tracking-tight text-white">VocabMaster</span>
-            <span class="text-[9px] px-1.5 py-0.5 ml-1 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-700 font-bold uppercase">Menu</span>
+          <div class="sidebar-text truncate">
+            <span class="text-xs font-black tracking-tight text-slate-800">VocabMaster</span>
+            <span class="text-[9px] px-1.5 py-0.5 ml-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold uppercase">Menu</span>
           </div>
         </div>
-        <button onclick="closeMobileSidebar()" class="w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center border border-slate-700/60 transition" title="Đóng menu">
+
+        <!-- Mobile Drawer Close Button -->
+        <button onclick="closeMobileSidebar()" class="md:hidden w-8 h-8 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 flex items-center justify-center border border-slate-200 transition cursor-pointer" title="Đóng menu">
           <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+
+        <!-- Desktop Collapse / Expand Toggle Button -->
+        <button id="btnSidebarCollapse" onclick="toggleSidebarCollapse()" class="hidden md:flex p-1.5 rounded-lg text-slate-600 hover:text-emerald-700 hover:bg-slate-100 border border-slate-200/80 transition items-center justify-center gap-1 cursor-pointer" title="Thu gọn thanh bên (Ctrl+B)">
+          <i id="btnSidebarCollapseIcon" class="fa-solid fa-chevron-left text-xs transition-transform duration-300"></i>
+          <span id="btnSidebarCollapseText" class="sidebar-text text-[11px] font-semibold">Thu gọn</span>
         </button>
       </div>
 
@@ -330,58 +377,58 @@ HTML_CONTENT = """<!DOCTYPE html>
       </div>
 
       <div class="space-y-1">
-        <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-3 mb-2">Học Tập & Ôn Luyện</div>
-        <button onclick="navigateTo('dashboard')" id="nav-dashboard" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-emerald-400 bg-emerald-500/10 transition">
-          <i class="fa-solid fa-house w-4 text-center"></i> <span>Tổng Quan</span>
+        <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-3 mb-2 sidebar-section-title">Học Tập & Ôn Luyện</div>
+        <button onclick="navigateTo('dashboard')" id="nav-dashboard" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-emerald-400 bg-emerald-500/10 transition" title="Tổng Quan">
+          <i class="fa-solid fa-house w-4 text-center shrink-0"></i> <span class="sidebar-text truncate">Tổng Quan</span>
         </button>
-        <button onclick="navigateTo('paths')" id="nav-paths" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
-          <i class="fa-solid fa-route w-4 text-center"></i> <span>Lộ Trình Học</span>
+        <button onclick="navigateTo('paths')" id="nav-paths" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition" title="Lộ Trình Học">
+          <i class="fa-solid fa-route w-4 text-center shrink-0"></i> <span class="sidebar-text truncate">Lộ Trình Học</span>
         </button>
-        <button onclick="navigateTo('vocab')" id="nav-vocab" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
-          <i class="fa-solid fa-book-bookmark w-4 text-center"></i> <span>Thư Viện Từ Vựng</span>
+        <button onclick="navigateTo('vocab')" id="nav-vocab" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition" title="Thư Viện Từ Vựng">
+          <i class="fa-solid fa-book-bookmark w-4 text-center shrink-0"></i> <span class="sidebar-text truncate">Thư Viện Từ Vựng</span>
         </button>
-        <button onclick="navigateTo('flashcards')" id="nav-flashcards" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
-          <i class="fa-solid fa-layer-group w-4 text-center"></i> <span>Thẻ Ghi Nhớ</span>
-        </button>
-      </div>
-
-      <div class="space-y-1">
-        <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-3 mb-2">Phiên Học Hàng Ngày</div>
-        <button onclick="startDailyStructuredSession()" id="nav-daily" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
-          <i class="fa-solid fa-clock-rotate-left w-4 text-center text-amber-400"></i> <span>Học 20 Phút Mỗi Ngày</span>
-        </button>
-        <button onclick="navigateTo('reviews')" id="nav-reviews" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
-          <i class="fa-solid fa-arrows-rotate w-4 text-center text-rose-400"></i> <span>Trung Tâm Ôn Tập</span>
-        </button>
-        <button onclick="navigateTo('practice')" id="nav-practice" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
-          <i class="fa-solid fa-pen-fancy w-4 text-center text-cyan-400"></i> <span>Luyện Viết & Nói</span>
+        <button onclick="navigateTo('flashcards')" id="nav-flashcards" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition" title="Thẻ Ghi Nhớ">
+          <i class="fa-solid fa-layer-group w-4 text-center shrink-0"></i> <span class="sidebar-text truncate">Thẻ Ghi Nhớ</span>
         </button>
       </div>
 
       <div class="space-y-1">
-        <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-3 mb-2">Quản Lý & Cài Đặt</div>
-        <button onclick="navigateTo('importer')" id="nav-importer" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
-          <i class="fa-solid fa-file-import w-4 text-center text-indigo-400"></i> <span>Nhập Từ Vựng</span>
+        <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-3 mb-2 sidebar-section-title">Phiên Học Hàng Ngày</div>
+        <button onclick="startDailyStructuredSession()" id="nav-daily" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition" title="Học 20 Phút Mỗi Ngày">
+          <i class="fa-solid fa-clock-rotate-left w-4 text-center text-amber-400 shrink-0"></i> <span class="sidebar-text truncate">Học 20 Phút Mỗi Ngày</span>
         </button>
-        <button onclick="navigateTo('progress')" id="nav-progress" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
-          <i class="fa-solid fa-chart-line w-4 text-center text-emerald-400"></i> <span>Tiến Độ & Chuỗi Học</span>
+        <button onclick="navigateTo('reviews')" id="nav-reviews" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition" title="Trung Tâm Ôn Tập">
+          <i class="fa-solid fa-arrows-rotate w-4 text-center text-rose-400 shrink-0"></i> <span class="sidebar-text truncate">Trung Tâm Ôn Tập</span>
         </button>
-        <button onclick="navigateTo('settings')" id="nav-settings" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
-          <i class="fa-solid fa-gear w-4 text-center"></i> <span>Cài Đặt</span>
+        <button onclick="navigateTo('practice')" id="nav-practice" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition" title="Luyện Viết & Nói">
+          <i class="fa-solid fa-pen-fancy w-4 text-center text-cyan-400 shrink-0"></i> <span class="sidebar-text truncate">Luyện Viết & Nói</span>
+        </button>
+      </div>
+
+      <div class="space-y-1">
+        <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-3 mb-2 sidebar-section-title">Quản Lý & Cài Đặt</div>
+        <button onclick="navigateTo('importer')" id="nav-importer" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition" title="Nhập Từ Vựng">
+          <i class="fa-solid fa-file-import w-4 text-center text-indigo-400 shrink-0"></i> <span class="sidebar-text truncate">Nhập Từ Vựng</span>
+        </button>
+        <button onclick="navigateTo('progress')" id="nav-progress" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition" title="Tiến Độ & Chuỗi Học">
+          <i class="fa-solid fa-chart-line w-4 text-center text-emerald-400 shrink-0"></i> <span class="sidebar-text truncate">Tiến Độ & Chuỗi Học</span>
+        </button>
+        <button onclick="navigateTo('settings')" id="nav-settings" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition" title="Cài Đặt">
+          <i class="fa-solid fa-gear w-4 text-center shrink-0"></i> <span class="sidebar-text truncate">Cài Đặt</span>
         </button>
       </div>
 
       <!-- Streak Mini Widget -->
-      <div class="mt-auto pt-4 border-t border-slate-800">
-        <div class="bg-slate-800/60 rounded-xl p-3 border border-slate-800 flex items-center justify-between">
+      <div class="mt-auto pt-4 border-t border-slate-200/80">
+        <div class="sidebar-streak-widget bg-slate-800/60 rounded-xl p-3 border border-slate-800 flex items-center justify-between" title="Duy trì chuỗi học hàng ngày">
           <div class="flex items-center gap-2">
-            <span class="text-xl">🔥</span>
-            <div>
+            <span class="text-xl shrink-0">🔥</span>
+            <div class="sidebar-streak-info">
               <div class="text-[11px] font-bold text-white"><span id="sidebarStreakCount">0</span> ngày liên tiếp</div>
               <div class="text-[9px] text-slate-400">Duy trì thói quen học</div>
             </div>
           </div>
-          <span id="sidebarStreakBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 font-bold border border-amber-500/20">Hoạt động</span>
+          <span id="sidebarStreakBadge" class="sidebar-streak-info text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 font-bold border border-amber-500/20">Hoạt động</span>
         </div>
       </div>
     </aside>
@@ -1927,14 +1974,51 @@ HTML_CONTENT = """<!DOCTYPE html>
       speakText(currentCard.term, currentCard.language || currentLearningLanguage);
     }
 
-    // Responsive Mobile Sidebar Drawer Controls
+    // Responsive Sidebar Controls (Mobile Drawer + Desktop Collapse/Expand)
+    function initSidebarPreference() {
+      const isCollapsed = localStorage.getItem('vocabmaster_sidebar_collapsed') === 'true';
+      const sidebar = document.getElementById('appSidebar');
+      const collapseText = document.getElementById('btnSidebarCollapseText');
+      const collapseBtn = document.getElementById('btnSidebarCollapse');
+      if (sidebar && isCollapsed && window.innerWidth >= 768) {
+        sidebar.classList.add('sidebar-collapsed');
+        if (collapseText) collapseText.textContent = '';
+        if (collapseBtn) collapseBtn.title = 'Mở rộng thanh bên (Ctrl+B)';
+      }
+    }
+
+    function toggleSidebar() {
+      toggleMobileSidebar();
+    }
+
     function toggleMobileSidebar() {
+      if (window.innerWidth < 768) {
+        const sidebar = document.getElementById('appSidebar');
+        if (!sidebar) return;
+        if (sidebar.classList.contains('-translate-x-full')) {
+          openMobileSidebar();
+        } else {
+          closeMobileSidebar();
+        }
+      } else {
+        toggleSidebarCollapse();
+      }
+    }
+
+    function toggleSidebarCollapse() {
       const sidebar = document.getElementById('appSidebar');
       if (!sidebar) return;
-      if (sidebar.classList.contains('-translate-x-full')) {
-        openMobileSidebar();
-      } else {
-        closeMobileSidebar();
+      const collapseText = document.getElementById('btnSidebarCollapseText');
+      const collapseBtn = document.getElementById('btnSidebarCollapse');
+
+      const isNowCollapsed = sidebar.classList.toggle('sidebar-collapsed');
+      localStorage.setItem('vocabmaster_sidebar_collapsed', isNowCollapsed ? 'true' : 'false');
+
+      if (collapseText) {
+        collapseText.textContent = isNowCollapsed ? '' : 'Thu gọn';
+      }
+      if (collapseBtn) {
+        collapseBtn.title = isNowCollapsed ? 'Mở rộng thanh bên (Ctrl+B)' : 'Thu gọn thanh bên (Ctrl+B)';
       }
     }
 
@@ -1965,6 +2049,10 @@ HTML_CONTENT = """<!DOCTYPE html>
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         closeMobileSidebar();
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'b' || e.key === 'B')) {
+        e.preventDefault();
+        toggleMobileSidebar();
       }
     });
 
@@ -4375,6 +4463,7 @@ HTML_CONTENT = """<!DOCTYPE html>
 
     // Bootstrapping App
     window.addEventListener('DOMContentLoaded', async () => {
+      initSidebarPreference();
       if (authToken) {
         await fetchUserProfile();
         navigateTo('dashboard');
